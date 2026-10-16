@@ -100,6 +100,9 @@ public class ArbreResultatsFiltrableVisualizer extends ViewResultsFullVisualizer
     private volatile boolean nomsAJour;
 
     private transient JTree arbre;
+    /** Noms proposés par la flèche du filtre ; modifié sur place, jamais remplacé. */
+    private final DefaultComboBoxModel<String> modeleNoms = new DefaultComboBoxModel<>();
+    private List<String> nomsAffiches = Collections.emptyList();
     private JComboBox<String> champFiltre;
     private JCheckBox caseRegex;
     private JCheckBox caseCasse;
@@ -197,17 +200,20 @@ public class ArbreResultatsFiltrableVisualizer extends ViewResultsFullVisualizer
     // ------------------------------------------------------------------
 
     private void installerBarreFiltre() {
-        champFiltre = new JComboBox<>();
+        champFiltre = new JComboBox<>(modeleNoms);
         champFiltre.setEditable(true);
         champFiltre.setPrototypeDisplayValue("Nom de transaction assez long");
+        champFiltre.setMaximumRowCount(20);
         champFiltre.setToolTipText("Filtre sur le nom des requêtes et des contrôleurs ;"
                 + " la flèche liste les noms déjà reçus");
-        // La liste des noms n'est recalculée qu'à l'ouverture, pour ne pas
-        // perturber la saisie en cours.
+        // La liste est tenue à jour en continu (minuterie ci-dessous) : le
+        // thème de JMeter (Darklaf) n'ouvre pas une liste vide, la remplir
+        // seulement à l'ouverture la laissait vide pour toujours (0.1.x).
+        // À l'ouverture, on la remet quand même à jour.
         champFiltre.addPopupMenuListener(new PopupMenuListener() {
             @Override
             public void popupMenuWillBecomeVisible(PopupMenuEvent e) {
-                remplirListeNoms();
+                majListeNoms(true);
             }
 
             @Override
@@ -251,6 +257,8 @@ public class ArbreResultatsFiltrableVisualizer extends ViewResultsFullVisualizer
                 }
             });
         }
+        // La liste de la flèche dépend de « Transactions seules ».
+        caseTransactions.addItemListener(e -> majListeNoms(true));
 
         JButton boutonNoms = new JButton("Noms…");
         boutonNoms.setToolTipText("Lister, copier et filtrer les noms reçus");
@@ -301,7 +309,12 @@ public class ArbreResultatsFiltrableVisualizer extends ViewResultsFullVisualizer
         reportFiltre = new Timer(300, e -> appliquerFiltre());
         reportFiltre.setRepeats(false);
         // Le compteur suit l'arrivée des résultats pendant un tir.
-        rafraichissementEtat = new Timer(1000, e -> majEtat());
+        rafraichissementEtat = new Timer(1000, e -> {
+            majEtat();
+            if (!nomsAJour) {
+                majListeNoms(false);
+            }
+        });
         rafraichissementEtat.start();
         majEtat();
     }
@@ -336,19 +349,40 @@ public class ArbreResultatsFiltrableVisualizer extends ViewResultsFullVisualizer
         reappliquerFiltre();
     }
 
-    private void remplirListeNoms() {
-        String saisi = motifSaisi();
-        DefaultComboBoxModel<String> modele = new DefaultComboBoxModel<>();
-        for (String nom : nomsConnus(caseTransactions.isSelected())) {
-            modele.addElement(nom);
+    /**
+     * Met à jour les noms proposés par la flèche, sans toucher à ce qui est
+     * en cours de saisie dans le champ (texte et curseur).
+     *
+     * @param force même si la liste est ouverte (appel juste avant son ouverture)
+     */
+    private void majListeNoms(boolean force) {
+        if (champFiltre == null || (!force && champFiltre.isPopupVisible())) {
+            return;
         }
+        nomsAJour = true;
+        List<String> noms = new ArrayList<>(nomsConnus(caseTransactions.isSelected()));
+        if (noms.equals(nomsAffiches)) {
+            return;
+        }
+        JTextComponent ed = editeur();
+        String texte = ed.getText();
+        int curseur = ed.getCaretPosition();
+        boolean avant = enConfiguration;
         enConfiguration = true;
         try {
-            champFiltre.setModel(modele);
-            champFiltre.getEditor().setItem(saisi);
+            modeleNoms.removeAllElements();
+            for (String nom : noms) {
+                modeleNoms.addElement(nom);
+            }
+            modeleNoms.setSelectedItem(texte.isEmpty() ? null : texte);
+            if (!texte.equals(ed.getText())) {
+                ed.setText(texte);
+            }
+            ed.setCaretPosition(Math.min(curseur, texte.length()));
         } finally {
-            enConfiguration = false;
+            enConfiguration = avant;
         }
+        nomsAffiches = noms;
     }
 
     private void majEtat() {

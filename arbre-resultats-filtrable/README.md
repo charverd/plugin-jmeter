@@ -9,6 +9,9 @@ Un « View Results Tree » de JMeter, avec en plus :
 Tout le reste (rendus, onglets Requête / Réponse, recherche, lecture d'un
 fichier JTL) est celui de l'arbre d'origine, réutilisé tel quel.
 
+**Version 0.2.0** : corrige la flèche du champ Filtre, qui ne déroulait rien
+dans JMeter (voir « Historique »).
+
 ## Installation
 
 ```bash
@@ -38,8 +41,13 @@ Clic droit sur un nœud de l'arbre :
 
 ### Filtrer
 
-Le champ **Filtre** s'applique en cours de frappe. Sa flèche déroule les noms
-déjà reçus.
+Le champ **Filtre** s'applique en cours de frappe. Sa **flèche** déroule les
+noms déjà reçus (seulement ceux des transactions si « Transactions seules »
+est coché) ; en choisir un l'inscrit dans le champ et filtre l'arbre. La
+liste suit l'arrivée des résultats pendant un tir, sans toucher à ce qui est
+en cours de saisie.
+
+![Flèche du filtre](docs/fleche-filtre.png)
 
 - Sans option, il garde les résultats dont le nom *contient* le texte, sans
   tenir compte des majuscules.
@@ -84,6 +92,18 @@ l'arbre sur les noms choisis (sélection multiple avec Ctrl ou Maj).
 - Le filtre garde ou masque des résultats de premier niveau : les
   sous-résultats d'une transaction gardée restent tous visibles.
 
+## Historique
+
+- **0.2.0** (2026-10-16) — la flèche du champ Filtre ne déroulait rien. La
+  liste des noms n'était remplie qu'au moment de son ouverture ; or le thème
+  de JMeter (Darklaf) n'ouvre pas une liste vide, elle restait donc vide pour
+  toujours. Elle est maintenant tenue à jour en continu (contrôle chaque
+  seconde), modifiée sur place sans perdre la saisie en cours. L'ancien banc
+  d'essai tournait hors de JMeter, avec le thème Swing par défaut, et ne
+  pouvait pas voir ce défaut : un essai dans la vraie interface a été ajouté.
+- **0.1.1** — paquet Java `fr.jmeter.plugins.arbre`.
+- **0.1.0** — première version.
+
 ## Fonctionnement
 
 Le `ViewResultsFullVisualizer` de JMeter garde son arbre en privé. Le plugin
@@ -101,11 +121,16 @@ La logique de filtre est isolée dans `FiltreNoms`, sans Swing, et testée par
 
 ## Essais
 
-- `mvn test` : tests unitaires du filtre.
-- `essai-gui/lancer.sh` : essai de bout en bout dans un vrai JMeter (5.4.3
-  par défaut, `JMETER_VERSION` pour une autre),
-  sous écran virtuel (Xvfb) — tir d'un plan avec transactions, chargement du
-  JTL dans le visualiseur, vérification du filtre, de la copie et de la
-  fenêtre des noms. Télécharge JMeter si `JMETER_HOME` n'est pas défini ;
-  utilise le Java de `JAVA_HOME`. Passé sur JMeter 5.4.3 / Java 11 et
-  JMeter 5.6.3 / Java 21.
+- `mvn test` : 11 tests unitaires du filtre.
+- `essai-gui/lancer.sh` : essai de bout en bout sous écran virtuel (Xvfb),
+  dans un vrai JMeter (5.4.3 par défaut, `JMETER_VERSION` pour une autre ;
+  téléchargé si `JMETER_HOME` n'est pas défini ; Java de `JAVA_HOME`) :
+  1. tir non graphique d'un plan avec transactions ;
+  2. `Essai.java` : chargement du JTL dans le visualiseur, filtre, copie,
+     fenêtre des noms (hors de l'interface de JMeter) ;
+  3. `EssaiJMeter.java`, dans la vraie interface de JMeter (thème Darklaf) :
+     flèche du filtre, choix d'un nom, saisie conservée à l'arrivée de
+     nouveaux résultats, « Transactions seules », effacement.
+
+  Version 0.2.0 : passé sur JMeter 5.4.3 / Java 11. (La 0.1.0 avait aussi
+  passé les étapes 1 et 2 sur JMeter 5.6.3 / Java 21.)

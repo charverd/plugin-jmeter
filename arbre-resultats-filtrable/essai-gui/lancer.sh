@@ -2,7 +2,8 @@
 # Essai de bout en bout dans un vrai JMeter, sous écran virtuel :
 #   1. tir non graphique de plan.jmx (transactions + Debug Samplers) ;
 #   2. ouverture du visualiseur, chargement du JTL, vérification du filtre,
-#      de la copie et de la fenêtre « Noms… », captures PNG.
+#      de la copie et de la fenêtre « Noms… », captures PNG ;
+#   3. dans la vraie interface de JMeter (thème Darklaf) : flèche du filtre.
 # Usage : JMETER_HOME=/chemin/apache-jmeter-x.y.z ./lancer.sh
 # (sans JMETER_HOME, JMeter $JMETER_VERSION, 5.4.3 par défaut, est téléchargé
 # dans target/). Le java du PATH (ou de JAVA_HOME) sert aux deux étapes.
@@ -38,3 +39,8 @@ timeout 120 "$JMETER_HOME/bin/jmeter" -n -t plan.jmx -j jmeter.log \
 timeout 120 xvfb-run -a -s "-screen 0 1280x800x24" \
   java -cp "$JMETER_HOME/lib/*:$JMETER_HOME/lib/ext/*" "$ici/Essai.java" 2>/dev/null \
   | grep -E '^(OK|ECHEC|TOUT| )'
+
+timeout 180 xvfb-run -a -s "-screen 0 1400x900x24" \
+  java -Djmeter.home="$JMETER_HOME" -Duser.language=fr \
+    -cp "$JMETER_HOME/bin/ApacheJMeter.jar:$JMETER_HOME/lib/*:$JMETER_HOME/lib/ext/*" \
+    "$ici/EssaiJMeter.java" plan.jmx 2>&1 | grep -E '^(OK|ECHEC|TOUT| )'
