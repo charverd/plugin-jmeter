@@ -5,6 +5,7 @@ Plugins maison pour Apache JMeter, un module Maven par plugin.
 | Module | Rôle |
 |---|---|
 | [`arbre-resultats-filtrable`](arbre-resultats-filtrable/) | Arbre de résultats avec copie des noms et filtre sur les noms des requêtes et des contrôleurs |
+| [`enregistreur-sans-variables`](enregistreur-sans-variables/) | Enregistreur HTTP(S) qui garde les valeurs capturées brutes, sans les remplacer par des `${variables}` |
 
 ## Construire
 
@@ -25,6 +26,6 @@ que le code du plugin.
 ## Ajouter un plugin
 
 1. Créer un dossier de module avec un `pom.xml` dont le parent est
-   `plugins-jmeter`.
+   `plugins-jmeter`, et sa propre `<version>`.
 2. Le déclarer dans `<modules>` du pom racine.
 3. Paquet Java : `fr.jmeter.plugins.<plugin>`.

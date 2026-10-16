@@ -12,6 +12,7 @@
 
   <modules>
     <module>arbre-resultats-filtrable</module>
+    <module>enregistreur-sans-variables</module>
   </modules>
 
   <properties>
@@ -33,6 +34,12 @@
       <dependency>
         <groupId>org.apache.jmeter</groupId>
         <artifactId>ApacheJMeter_components</artifactId>
+        <version>${jmeter.version}</version>
+        <scope>provided</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.jmeter</groupId>
+        <artifactId>ApacheJMeter_http</artifactId>
         <version>${jmeter.version}</version>
         <scope>provided</scope>
       </dependency>

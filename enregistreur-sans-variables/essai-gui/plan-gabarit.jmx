@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jmeterTestPlan version="1.2" properties="5.0" jmeter="5.4.3">
+  <hashTree>
+    <TestPlan guiclass="TestPlanGui" testclass="TestPlan" testname="Essai enregistrement">
+      <elementProp name="TestPlan.user_defined_variables" elementType="Arguments" guiclass="ArgumentsPanel" testclass="Arguments">
+        <collectionProp name="Arguments.arguments">
+          <elementProp name="serveur" elementType="Argument"><stringProp name="Argument.name">serveur</stringProp><stringProp name="Argument.value">127.0.0.1</stringProp><stringProp name="Argument.metadata">=</stringProp></elementProp>
+          <elementProp name="port_app" elementType="Argument"><stringProp name="Argument.name">port_app</stringProp><stringProp name="Argument.value">@PORT_APP@</stringProp><stringProp name="Argument.metadata">=</stringProp></elementProp>
+          <elementProp name="utilisateur" elementType="Argument"><stringProp name="Argument.name">utilisateur</stringProp><stringProp name="Argument.value">alice</stringProp><stringProp name="Argument.metadata">=</stringProp></elementProp>
+        </collectionProp>
+      </elementProp>
+    </TestPlan>
+    <hashTree>
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Utilisateurs">
+        <intProp name="ThreadGroup.num_threads">1</intProp>
+        <intProp name="ThreadGroup.ramp_time">0</intProp>
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController">
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+          <stringProp name="LoopController.loops">1</stringProp>
+        </elementProp>
+      </ThreadGroup>
+      <hashTree>
+        <Arguments guiclass="ArgumentsPanel" testclass="Arguments" testname="Variables du parcours">
+          <collectionProp name="Arguments.arguments">
+            <elementProp name="jeton" elementType="Argument"><stringProp name="Argument.name">jeton</stringProp><stringProp name="Argument.value">XYZ789</stringProp><stringProp name="Argument.metadata">=</stringProp></elementProp>
+          </collectionProp>
+        </Arguments>
+        <hashTree/>
+        <RecordingController guiclass="RecordController" testclass="RecordingController" testname="Enregistrement"/>
+        <hashTree/>
+      </hashTree>
+      <@BALISE@ guiclass="@GUI@" testclass="@CLASSE@" testname="Enregistreur">
+        <stringProp name="ProxyControlGui.port">@PORT_PROXY@</stringProp>
+        <boolProp name="ProxyControlGui.capture_http_headers">true</boolProp>
+        <intProp name="ProxyControlGui.grouping">0</intProp>
+        <collectionProp name="ProxyControlGui.exclude_list"/>
+        <collectionProp name="ProxyControlGui.include_list"/>
+      </@BALISE@>
+      <hashTree/>
+    </hashTree>
+  </hashTree>
+</jmeterTestPlan>

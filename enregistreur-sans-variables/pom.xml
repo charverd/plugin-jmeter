@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>fr.jmeter.plugins</groupId>
+    <artifactId>plugins-jmeter</artifactId>
+    <version>0.1.1</version>
+  </parent>
+
+  <artifactId>enregistreur-sans-variables</artifactId>
+  <version>0.1.0</version>
+  <name>Enregistreur de script sans variables</name>
+  <description>Enregistreur HTTP(S) JMeter qui garde les valeurs brutes, sans les remplacer par des ${variables}.</description>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.apache.jmeter</groupId>
+      <artifactId>ApacheJMeter_core</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.jmeter</groupId>
+      <artifactId>ApacheJMeter_http</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+    </dependency>
+  </dependencies>
+</project>
