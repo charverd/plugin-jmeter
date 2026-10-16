@@ -10,7 +10,11 @@ décharger Claude.
   phase de raisonnement (`enable_thinking=false`).
 - `file.py` : file de tâches à lancer en arrière-plan ; un seul bilan à la fin,
   avancement dans `etat.txt`.
-- `taches/` : les spécifications envoyées.
+- `taches/` : les spécifications envoyées (copiées dans le wiki, `raw/prompts/bonsai/`).
+
+**Aucune limite de tokens** n'est imposée par ces outils (consigne de l'utilisateur, 2026-10-16) :
+seule la limite du serveur s'applique (`--n-predict 40960` dans la configuration llama-swap de
+Bonsai au 2026-10-16).
 
 ## Bilan (voir `journal.tsv`)
 

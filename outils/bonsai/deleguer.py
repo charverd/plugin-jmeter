@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 """Délègue une tâche de code au modèle Bonsai local (llama-swap, API OpenAI).
 
-Usage : deleguer.py taches/<tache>.md [--racine <dossier du dépôt>] [--max-tokens N]
+Usage : deleguer.py taches/<tache>.md [--racine <dossier du dépôt>] [--sans-reflexion]
+
+Aucune limite de tokens n'est imposée (consigne de l'utilisateur, 2026-10-16) :
+seule la limite du serveur s'applique (--n-predict de llama-swap).
 
 Le prompt demande à Bonsai de livrer chaque fichier dans un bloc
     // FICHIER: chemin/relatif/Depuis/La/Racine.java
@@ -21,15 +24,13 @@ ICI = os.path.dirname(os.path.abspath(__file__))
 ap = argparse.ArgumentParser()
 ap.add_argument("tache")
 ap.add_argument("--racine", default=os.path.dirname(os.path.dirname(ICI)))
-ap.add_argument("--max-tokens", type=int, default=16384)
 ap.add_argument("--sans-reflexion", action="store_true",
                 help="désactive la phase de raisonnement (enable_thinking=false) : rapide, code moins sûr")
 a = ap.parse_args()
 
 nom = os.path.splitext(os.path.basename(a.tache))[0]
 prompt = open(a.tache, encoding="utf-8").read()
-corps = {"model": MODELE, "messages": [{"role": "user", "content": prompt}],
-         "max_tokens": a.max_tokens, "stream": False}
+corps = {"model": MODELE, "messages": [{"role": "user", "content": prompt}], "stream": False}
 if a.sans_reflexion:
     corps["chat_template_kwargs"] = {"enable_thinking": False}
 debut = time.time()

@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """File d'attente de tâches Bonsai, pensée pour être lancée en arrière-plan.
 
-Usage : file.py [--paralleles N] [--max-tokens N] [--sans-reflexion] taches/a.md taches/b.md …
+Usage : file.py [--paralleles N] [--sans-reflexion] taches/a.md taches/b.md …
+
+Aucune limite de tokens n'est imposée : seule celle du serveur s'applique.
 
 Lance les tâches (N à la fois, 2 par défaut, sur les emplacements libres de
 llama-server), attend qu'elles soient toutes finies, puis imprime UN bilan et
@@ -17,7 +19,6 @@ ICI = os.path.dirname(os.path.abspath(__file__))
 ap = argparse.ArgumentParser()
 ap.add_argument("taches", nargs="+")
 ap.add_argument("--paralleles", type=int, default=2)
-ap.add_argument("--max-tokens", type=int, default=16384)
 ap.add_argument("--sans-reflexion", action="store_true")
 a = ap.parse_args()
 
@@ -37,7 +38,7 @@ def lancer(t):
         with verrou:
             etat[t] = "en cours depuis " + time.strftime("%H:%M")
             ecrire_etat()
-        cmd = [sys.executable, os.path.join(ICI, "deleguer.py"), t, "--max-tokens", str(a.max_tokens)]
+        cmd = [sys.executable, os.path.join(ICI, "deleguer.py"), t]
         if a.sans_reflexion:
             cmd.append("--sans-reflexion")
         p = subprocess.run(cmd, capture_output=True, text=True)
