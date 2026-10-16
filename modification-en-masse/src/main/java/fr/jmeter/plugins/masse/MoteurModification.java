@@ -19,10 +19,12 @@ import java.util.regex.Pattern;
 import javax.swing.tree.TreeNode;
 
 import org.apache.jmeter.config.Argument;
+import org.apache.jmeter.config.Arguments;
 import org.apache.jmeter.gui.tree.JMeterTreeNode;
 import org.apache.jmeter.protocol.http.control.Header;
 import org.apache.jmeter.protocol.http.control.HeaderManager;
 import org.apache.jmeter.protocol.http.sampler.HTTPSamplerBase;
+import org.apache.jmeter.protocol.http.util.HTTPArgument;
 import org.apache.jmeter.testelement.TestElement;
 import org.apache.jmeter.testelement.TestPlan;
 import org.apache.jmeter.testelement.property.JMeterProperty;
@@ -54,13 +56,29 @@ public final class MoteurModification {
         }
     }
 
-    /** Ce qu'on sait d'un en-tête sur l'ensemble du périmètre. */
-    public static final class StatEntete {
+    /** Ce que la fenêtre peut modifier par nom : un en-tête HTTP ou un paramètre de requête. */
+    public enum Cible {
+        ENTETE("En-tête HTTP"),
+        PARAMETRE("Paramètre de requête");
+
+        private final String libelle;
+
+        Cible(String libelle) {
+            this.libelle = libelle;
+        }
+
+        public String getLibelle() {
+            return libelle;
+        }
+    }
+
+    /** Ce qu'on sait d'un en-tête ou d'un paramètre sur l'ensemble du périmètre. */
+    public static final class StatNom {
         private final String nom;
         private int occurrences;
         private final Set<String> valeurs = new TreeSet<>();
 
-        StatEntete(String nom) {
+        StatNom(String nom) {
             this.nom = nom;
         }
 
@@ -144,21 +162,21 @@ public final class MoteurModification {
     // ------------------------------------------------------------------
 
     /** En-têtes présents dans le périmètre, regroupés sans tenir compte de la casse du nom. */
-    public static List<StatEntete> entetes(Collection<JMeterTreeNode> perimetre) {
-        Map<String, StatEntete> stats = new LinkedHashMap<>();
+    public static List<StatNom> entetes(Collection<JMeterTreeNode> perimetre) {
+        Map<String, StatNom> stats = new LinkedHashMap<>();
         for (JMeterTreeNode n : perimetre) {
             if (n.getTestElement() instanceof HeaderManager) {
                 HeaderManager hm = (HeaderManager) n.getTestElement();
                 for (int i = 0; i < hm.size(); i++) {
                     Header h = hm.get(i);
-                    StatEntete s = stats.computeIfAbsent(h.getName().toLowerCase(Locale.ROOT),
-                            k -> new StatEntete(h.getName()));
+                    StatNom s = stats.computeIfAbsent(h.getName().toLowerCase(Locale.ROOT),
+                            k -> new StatNom(h.getName()));
                     s.occurrences++;
                     s.valeurs.add(h.getValue());
                 }
             }
         }
-        List<StatEntete> liste = new ArrayList<>(stats.values());
+        List<StatNom> liste = new ArrayList<>(stats.values());
         liste.sort((a, b) -> a.getNom().compareToIgnoreCase(b.getNom()));
         return liste;
     }
@@ -230,6 +248,132 @@ public final class MoteurModification {
         for (int i = 0; i < hm.size(); i++) {
             if (hm.get(i) == h) {
                 hm.remove(i);
+                return;
+            }
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // Par cible : en-tête HTTP ou paramètre de requête
+    // ------------------------------------------------------------------
+
+    /** Noms présents dans le périmètre pour la cible, avec leurs valeurs. */
+    public static List<StatNom> noms(Collection<JMeterTreeNode> perimetre, Cible cible) {
+        return cible == Cible.ENTETE ? entetes(perimetre) : parametres(perimetre);
+    }
+
+    /** Donne {@code valeur} à toutes les occurrences de {@code nom}. */
+    public static List<Modification> definir(Collection<JMeterTreeNode> perimetre, Cible cible, String nom,
+            String valeur, boolean ajouterSiAbsent) {
+        return cible == Cible.ENTETE ? definirEntete(perimetre, nom, valeur, ajouterSiAbsent)
+                : definirParametre(perimetre, nom, valeur, ajouterSiAbsent);
+    }
+
+    /** Retire toutes les occurrences de {@code nom}. */
+    public static List<Modification> supprimer(Collection<JMeterTreeNode> perimetre, Cible cible, String nom) {
+        return cible == Cible.ENTETE ? supprimerEntete(perimetre, nom) : supprimerParametre(perimetre, nom);
+    }
+
+    // ------------------------------------------------------------------
+    // Paramètres de requête
+    // ------------------------------------------------------------------
+
+    /**
+     * Requêtes HTTP du périmètre qui ont des paramètres : celles dont le
+     * corps est brut (« Body Data ») n'en ont pas, leur unique argument est
+     * le corps.
+     */
+    private static List<JMeterTreeNode> requetesAParametres(Collection<JMeterTreeNode> perimetre) {
+        List<JMeterTreeNode> l = new ArrayList<>();
+        for (JMeterTreeNode n : perimetre) {
+            if (n.getTestElement() instanceof HTTPSamplerBase
+                    && !((HTTPSamplerBase) n.getTestElement()).getPostBodyRaw()) {
+                l.add(n);
+            }
+        }
+        return l;
+    }
+
+    /** Paramètres présents dans le périmètre ; le nom est comparé en respectant la casse. */
+    public static List<StatNom> parametres(Collection<JMeterTreeNode> perimetre) {
+        Map<String, StatNom> stats = new LinkedHashMap<>();
+        for (JMeterTreeNode n : requetesAParametres(perimetre)) {
+            Arguments args = ((HTTPSamplerBase) n.getTestElement()).getArguments();
+            for (int i = 0; i < args.getArgumentCount(); i++) {
+                Argument a = args.getArgument(i);
+                if (a.getName() == null || a.getName().isEmpty()) {
+                    continue;
+                }
+                StatNom s = stats.computeIfAbsent(a.getName(), StatNom::new);
+                s.occurrences++;
+                s.valeurs.add(a.getValue());
+            }
+        }
+        List<StatNom> liste = new ArrayList<>(stats.values());
+        liste.sort((a, b) -> a.getNom().compareToIgnoreCase(b.getNom()));
+        return liste;
+    }
+
+    /** Donne {@code valeur} au paramètre {@code nom} dans toutes les requêtes du périmètre. */
+    public static List<Modification> definirParametre(Collection<JMeterTreeNode> perimetre, String nom,
+            String valeur, boolean ajouterSiAbsent) {
+        List<Modification> modifs = new ArrayList<>();
+        for (JMeterTreeNode n : requetesAParametres(perimetre)) {
+            Arguments args = ((HTTPSamplerBase) n.getTestElement()).getArguments();
+            boolean trouve = false;
+            for (int i = 0; i < args.getArgumentCount(); i++) {
+                Argument a = args.getArgument(i);
+                if (nom.equals(a.getName())) {
+                    trouve = true;
+                    if (!valeur.equals(a.getValue())) {
+                        String avant = a.getValue();
+                        modifs.add(new Modification(n, chemin(n), "Paramètre " + nom, avant, valeur,
+                                a::getValue, () -> a.setValue(valeur), () -> a.setValue(avant)));
+                    }
+                }
+            }
+            if (!trouve && ajouterSiAbsent) {
+                // Comme un paramètre ajouté à la main : encodé dans l'URL à l'envoi.
+                HTTPArgument nouveau = new HTTPArgument(nom, valeur);
+                modifs.add(new Modification(n, chemin(n), "Paramètre " + nom, Modification.ABSENT, valeur,
+                        () -> args.getArgumentsAsMap().containsKey(nom) ? "" : null,
+                        () -> args.addArgument(nouveau), () -> retirer(args, nouveau)));
+            }
+        }
+        return modifs;
+    }
+
+    /** Retire le paramètre {@code nom} de toutes les requêtes du périmètre. */
+    public static List<Modification> supprimerParametre(Collection<JMeterTreeNode> perimetre, String nom) {
+        List<Modification> modifs = new ArrayList<>();
+        for (JMeterTreeNode n : requetesAParametres(perimetre)) {
+            Arguments args = ((HTTPSamplerBase) n.getTestElement()).getArguments();
+            for (int i = 0; i < args.getArgumentCount(); i++) {
+                Argument a = args.getArgument(i);
+                if (nom.equals(a.getName())) {
+                    modifs.add(new Modification(n, chemin(n), "Paramètre " + nom, a.getValue(),
+                            Modification.SUPPRIME, () -> present(args, a) ? a.getValue() : null,
+                            () -> retirer(args, a), () -> args.addArgument(a)));
+                }
+            }
+        }
+        return modifs;
+    }
+
+    private static boolean present(Arguments args, Argument a) {
+        for (int i = 0; i < args.getArgumentCount(); i++) {
+            if (args.getArgument(i) == a) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** Par identité : Arguments.removeArgument(Argument) retirerait aussi les doublons égaux. */
+    private static void retirer(Arguments args, Argument a) {
+        for (int i = 0; i < args.getArgumentCount(); i++) {
+            if (args.getArgument(i) == a) {
+                args.removeArgument(i);
                 return;
             }
         }

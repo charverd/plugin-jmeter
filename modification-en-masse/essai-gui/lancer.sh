@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Essai de bout en bout dans un vrai JMeter, sous écran virtuel : sélection
 # multiple de deux transactions sur trois, menu clic droit, fenêtre
-# « Modification en masse » (en-tête puis rechercher / remplacer), puis
+# « Modification en masse » (en-tête, paramètre, puis rechercher / remplacer), puis
 # enregistrement du plan par la commande « Enregistrer » de JMeter, et
 # vérification du fichier.
 # Usage : JMETER_HOME=/chemin/apache-jmeter-x.y.z ./lancer.sh
@@ -50,6 +50,7 @@ for tc in ("TC_01_Connexion", "TC_02_Commande"):
     verifier(f"fichier : {tc} a Bearer ${{token}} sur ses 2 requêtes", b.count("Bearer ${token}") == 2)
     verifier(f"fichier : {tc} a ${{serveur}} sur ses 2 requêtes", b.count('<stringProp name="HTTPSampler.domain">${serveur}</stringProp>') == 2)
     verifier(f"fichier : {tc} garde ses X-Correlation", "abc-1" in b and "abc-2" in b)
+    verifier(f"fichier : {tc} a client = ${{client}} sur ses 2 requêtes", b.count('<stringProp name="Argument.value">${client}</stringProp>') == 2)
 b = par_tc["TC_03_Deconnexion"]
 verifier("fichier : TC_03 inchangée", "Bearer jeton3" in b and "${" not in b)
 print("TOUT EST BON (fichier)" if ok else "ECHEC (fichier)")

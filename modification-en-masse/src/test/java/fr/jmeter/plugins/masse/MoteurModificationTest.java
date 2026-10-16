@@ -18,7 +18,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import fr.jmeter.plugins.masse.MoteurModification.Champ;
-import fr.jmeter.plugins.masse.MoteurModification.StatEntete;
+import fr.jmeter.plugins.masse.MoteurModification.Cible;
+import fr.jmeter.plugins.masse.MoteurModification.StatNom;
 
 /**
  * Arbre d'essai : un plan, trois transactions de deux requêtes, chaque
@@ -97,7 +98,7 @@ class MoteurModificationTest {
 
     @Test
     void statistiquesDesEntetes() {
-        List<StatEntete> s = MoteurModification.entetes(
+        List<StatNom> s = MoteurModification.entetes(
                 MoteurModification.perimetre(new JMeterTreeNode[] { tc1, tc2 }, true, false));
         assertEquals(2, s.size());
         assertEquals("Authorization", s.get(0).getNom());
@@ -219,5 +220,83 @@ class MoteurModificationTest {
         List<JMeterTreeNode> p = MoteurModification.perimetre(new JMeterTreeNode[] { tc1 }, true, false);
         assertThrows(java.util.regex.PatternSyntaxException.class, () -> MoteurModification.remplacer(p, "([",
                 "x", true, false, EnumSet.allOf(Champ.class)));
+    }
+
+    // ------------------------------------------------------------------
+    // Paramètres de requête (V2)
+    // ------------------------------------------------------------------
+
+    private static String parametre(JMeterTreeNode tc, int req, String nom) {
+        return requete(tc, req).getArguments().getArgumentsAsMap().get(nom);
+    }
+
+    @Test
+    void statistiquesDesParametres() {
+        List<StatNom> s = MoteurModification.noms(
+                MoteurModification.perimetre(new JMeterTreeNode[] { tc1, tc2 }, true, false), Cible.PARAMETRE);
+        assertEquals(1, s.size());
+        assertEquals("client", s.get(0).getNom());
+        assertEquals(4, s.get(0).getOccurrences());
+    }
+
+    @Test
+    void memeVariablePourUnParametreSurLaSelectionSeulement() {
+        List<JMeterTreeNode> p = MoteurModification.perimetre(new JMeterTreeNode[] { tc1, tc2 }, true, false);
+        List<Modification> m = MoteurModification.definir(p, Cible.PARAMETRE, "client", "${client}", false);
+        assertEquals(4, m.size());
+        assertEquals("Paramètre client", m.get(0).getChamp());
+        MoteurModification.appliquer(m);
+        assertEquals("${client}", parametre(tc1, 0, "client"));
+        assertEquals("${client}", parametre(tc2, 1, "client"));
+        assertEquals("C123", parametre(tc3, 0, "client"));
+    }
+
+    @Test
+    void nomDeParametreSensibleALaCasse() {
+        List<JMeterTreeNode> p = MoteurModification.perimetre(new JMeterTreeNode[] { tc1 }, true, false);
+        assertEquals(0, MoteurModification.definir(p, Cible.PARAMETRE, "Client", "${client}", false).size());
+    }
+
+    @Test
+    void ajouterUnParametreLaOuIlManqueEtDefaire() {
+        List<JMeterTreeNode> p = MoteurModification.perimetre(new JMeterTreeNode[] { tc1 }, true, false);
+        MoteurModification.Bilan b = MoteurModification.appliquer(
+                MoteurModification.definir(p, Cible.PARAMETRE, "langue", "${langue}", true));
+        assertEquals(2, b.getAppliquees().size());
+        assertEquals("${langue}", parametre(tc1, 0, "langue"));
+        assertEquals(2, requete(tc1, 0).getArguments().getArgumentCount());
+        MoteurModification.defaire(b);
+        assertNull(parametre(tc1, 0, "langue"));
+        assertEquals(1, requete(tc1, 0).getArguments().getArgumentCount());
+    }
+
+    @Test
+    void supprimerUnParametre() {
+        List<JMeterTreeNode> p = MoteurModification.perimetre(new JMeterTreeNode[] { tc2 }, true, false);
+        MoteurModification.appliquer(MoteurModification.supprimer(p, Cible.PARAMETRE, "client"));
+        assertNull(parametre(tc2, 0, "client"));
+        assertEquals("C123", parametre(tc1, 0, "client"));
+    }
+
+    @Test
+    void lesRequetesACorpsBrutSontIgnorees() {
+        HTTPSamplerProxy s = requete(tc1, 0);
+        s.getArguments().clear();
+        s.setPostBodyRaw(true);
+        s.addNonEncodedArgument("", "{\"client\":\"C123\"}", "");
+        List<JMeterTreeNode> p = MoteurModification.perimetre(new JMeterTreeNode[] { tc1 }, true, false);
+        List<Modification> m = MoteurModification.definir(p, Cible.PARAMETRE, "client", "${client}", true);
+        // Seule la seconde requête (paramètres classiques) est concernée, même avec « ajouter ».
+        assertEquals(1, m.size());
+        assertTrue(m.get(0).getElement().endsWith("req-2"));
+    }
+
+    @Test
+    void lEnteteEtLeParametreDeMemeNomNeSeConfondentPas() {
+        entetes(tc1, 0).add(new Header("client", "entete"));
+        List<JMeterTreeNode> p = MoteurModification.perimetre(new JMeterTreeNode[] { tc1 }, true, false);
+        MoteurModification.appliquer(MoteurModification.definir(p, Cible.PARAMETRE, "client", "${client}", false));
+        assertEquals("entete", entetes(tc1, 0).getFirstHeaderNamed("client").getValue());
+        assertEquals("${client}", parametre(tc1, 0, "client"));
     }
 }

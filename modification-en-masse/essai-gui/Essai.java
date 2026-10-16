@@ -41,6 +41,7 @@ public class Essai {
       if (nom.equals(n.getName())) return n;
     return null; }
   static JMeterTreeNode enTetes(String tc, int req) { return (JMeterTreeNode) noeud(tc).getChildAt(req - 1).getChildAt(0); }
+  static String param(String tc, int req) { return ((org.apache.jmeter.protocol.http.sampler.HTTPSamplerBase) ((JMeterTreeNode) noeud(tc).getChildAt(req - 1)).getTestElement()).getArguments().getArgumentsAsMap().get("client"); }
   static String auth(String tc, int req) { return ((HeaderManager) enTetes(tc, req).getTestElement()).getFirstHeaderNamed("Authorization").getValue(); }
 
   public static void main(String[] a) throws Exception {
@@ -108,6 +109,22 @@ public class Essai {
     verifier("TC_01 et TC_02 : Authorization = Bearer ${token}", auth("TC_01_Connexion", 1).equals("Bearer ${token}") && auth("TC_02_Commande", 2).equals("Bearer ${token}"));
     verifier("TC_03 (non sélectionnée) inchangée", auth("TC_03_Deconnexion", 1).equals("Bearer jeton3"));
     verifier("le plan est marqué modifié", gp.isDirty());
+
+    // 4 bis. V2 : même onglet, cible « Paramètre de requête » : client -> ${client}
+    edt(() -> trouver(d.getContentPane(), JRadioButton.class, "Paramètre de requête").doClick());
+    pause(300);
+    String titreColonne = String.valueOf(tEntetes.getColumnModel().getColumn(0).getHeaderValue());
+    verifier("la liste montre les paramètres (colonne « " + titreColonne + " »)",
+        "Paramètre".equals(titreColonne) && tEntetes.getRowCount() == 1 && "client".equals(tEntetes.getModel().getValueAt(0, 0)));
+    edt(() -> { tEntetes.setRowSelectionInterval(0, 0); champs.get(1).setText("${client}");
+      trouver(d.getContentPane(), JButton.class, "Aperçu : donner cette valeur").doClick(); });
+    pause(300);
+    verifier("aperçu : 4 paramètres client", tApercu.getRowCount() == 4);
+    capture("2b-apercu-parametres.png", d.getContentPane());
+    edt(() -> trouver(d.getContentPane(), JButton.class, "Appliquer les modifications cochées").doClick());
+    pause(500);
+    verifier("TC_01 et TC_02 : client = ${client}", "${client}".equals(param("TC_01_Connexion", 1)) && "${client}".equals(param("TC_02_Commande", 2)));
+    verifier("TC_03 : client inchangé", "C123".equals(param("TC_03_Deconnexion", 1)));
 
     // 5. Onglet Rechercher / remplacer : serveur -> ${serveur}
     JTabbedPane onglets = trouver(d.getContentPane(), JTabbedPane.class, null);

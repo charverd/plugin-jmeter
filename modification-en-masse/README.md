@@ -2,8 +2,11 @@
 
 Modifier d'un coup les requêtes et les en-têtes de plusieurs éléments
 sélectionnés dans l'arbre JMeter, au lieu de cliquer sur chacun. Par
-exemple, donner `Bearer ${token}` à l'en-tête `Authorization` de toutes les
-requêtes de plusieurs transactions.
+exemple, donner `Bearer ${token}` à l'en-tête `Authorization`, ou `${client}`
+au paramètre `client`, dans toutes les requêtes de plusieurs transactions.
+
+**Version 0.2.0** : le premier onglet choisit sa cible, **en-tête HTTP** ou
+**paramètre de requête**.
 
 ![Aperçu d'une modification d'en-tête](docs/apercu-entetes.png)
 
@@ -11,8 +14,9 @@ requêtes de plusieurs transactions.
 
 Compatible JMeter 5.4.3 et plus récent, Java 11 (bytecode Java 8).
 
-1. Fermer JMeter et copier `modification-en-masse-0.1.0.jar` dans `lib\ext`
-   (par exemple `C:\apache-jmeter-5.4.3\lib\ext\`).
+1. Fermer JMeter, **retirer l'ancienne version** (`modification-en-masse-0.1.0.jar`)
+   de `lib\ext` si elle y est, et copier `modification-en-masse-0.2.0.jar`
+   à la place (par exemple `C:\apache-jmeter-5.4.3\lib\ext\`).
 2. Relancer JMeter.
 
 Le plugin n'ajoute **aucun élément au plan de test** : un plan modifié avec
@@ -43,17 +47,30 @@ requêtes et de gestionnaires d'en-têtes sont concernés. Options : ne prendre
 que les éléments sélectionnés eux-mêmes, ignorer ou non les éléments
 désactivés (ignorés par défaut).
 
-### Onglet « En-têtes »
+### Onglet « En-têtes / paramètres »
 
-Liste les en-têtes présents dans le périmètre, avec leur nombre et leurs
-valeurs. Choisir un en-tête (ou en saisir un nouveau), puis :
+En haut, **Modifier :** choisit la cible :
+
+- **En-tête HTTP** : les en-têtes des gestionnaires d'en-têtes (*HTTP Header
+  Manager*). Nom comparé sans tenir compte des majuscules, comme le fait HTTP.
+- **Paramètre de requête** : les paramètres des requêtes HTTP, d'URL ou de
+  formulaire. Nom comparé **en respectant la casse** (`client` et `Client`
+  sont deux paramètres). Les requêtes dont le corps est brut (*Body Data*,
+  JSON par exemple) n'ont pas de paramètres : elles sont ignorées ; pour
+  elles, utiliser l'onglet *Rechercher / remplacer*, champ « Paramètres et
+  corps ».
+
+La liste montre les noms trouvés dans le périmètre, avec leur nombre et
+leurs valeurs. Choisir un nom (ou en saisir un nouveau), puis :
 
 - **donner cette valeur** à toutes ses occurrences, par exemple
-  `Bearer ${token}`. La case « Ajouter l'en-tête aux gestionnaires où il
-  manque » l'ajoute aussi là où il n'est pas ;
-- **supprimer l'en-tête** partout.
+  `Bearer ${token}` ou `${client}`. La case « Ajouter … où il manque »
+  l'ajoute aussi là où il n'est pas : dans chaque gestionnaire d'en-têtes,
+  ou dans chaque requête (un paramètre ajouté est encodé dans l'URL à
+  l'envoi, comme un paramètre ajouté à la main) ;
+- **supprimer** l'en-tête ou le paramètre partout.
 
-Le nom de l'en-tête est comparé sans tenir compte des majuscules.
+![Aperçu d'une modification de paramètre](docs/apercu-parametres.png)
 
 ### Onglet « Rechercher / remplacer »
 
@@ -109,11 +126,12 @@ reprennent les groupes capturés. Par exemple
 
 ## Essais
 
-- `mvn test` : 13 tests du moteur (périmètre, en-têtes, remplacement texte
-  et regex, paramètres, noms, lignes décochées, modification périmée,
-  annulation).
+- `mvn test` : 20 tests du moteur (périmètre, en-têtes, paramètres de
+  requête — casse, corps brut ignoré, ajout et annulation —, remplacement
+  texte et regex, noms, lignes décochées, modification périmée, annulation).
 - `essai-gui/lancer.sh` : essai dans la vraie interface de JMeter (5.4.3 par
   défaut) sous écran virtuel. Il sélectionne 2 transactions sur 3, passe par
-  le menu clic droit et la fenêtre (en-tête puis remplacement du serveur),
+  le menu clic droit et la fenêtre (en-tête, paramètre, puis remplacement
+  du serveur),
   vérifie qu'un écran resté ouvert n'écrase pas la modification, enregistre
   par la commande *Enregistrer* puis relit le fichier.

@@ -22,7 +22,9 @@ import javax.swing.JCheckBox;
 import javax.swing.JComponent;
 import javax.swing.JDialog;
 import javax.swing.JLabel;
+import javax.swing.ButtonGroup;
 import javax.swing.JPanel;
+import javax.swing.JRadioButton;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
 import javax.swing.JTabbedPane;
@@ -38,7 +40,8 @@ import org.apache.jmeter.protocol.http.control.HeaderManager;
 import org.apache.jmeter.protocol.http.sampler.HTTPSamplerBase;
 
 import fr.jmeter.plugins.masse.MoteurModification.Champ;
-import fr.jmeter.plugins.masse.MoteurModification.StatEntete;
+import fr.jmeter.plugins.masse.MoteurModification.Cible;
+import fr.jmeter.plugins.masse.MoteurModification.StatNom;
 
 /**
  * Fenêtre « Modification en masse » : agit sur les éléments sélectionnés
@@ -55,11 +58,15 @@ public class FenetreModificationMasse extends JDialog {
     private final JCheckBox caseContenu = new JCheckBox("Inclure tout le contenu des éléments sélectionnés", true);
     private final JCheckBox caseDesactives = new JCheckBox("Ignorer les éléments désactivés", true);
 
+    private final JRadioButton radioEntete = new JRadioButton(Cible.ENTETE.getLibelle(), true);
+    private final JRadioButton radioParametre = new JRadioButton(Cible.PARAMETRE.getLibelle());
     private final ModeleEntetes modeleEntetes = new ModeleEntetes();
     private final JTable tableEntetes = new JTable(modeleEntetes);
+    private final JLabel lblNom = new JLabel();
     private final JTextField champNomEntete = new JTextField(20);
     private final JTextField champValeurEntete = new JTextField(30);
-    private final JCheckBox caseAjouter = new JCheckBox("Ajouter l'en-tête aux gestionnaires où il manque");
+    private final JCheckBox caseAjouter = new JCheckBox();
+    private final JButton apercuSupprimer = new JButton();
 
     private final JTextField champRecherche = new JTextField(25);
     private final JTextField champRemplacement = new JTextField(25);
@@ -108,7 +115,7 @@ public class FenetreModificationMasse extends JDialog {
         haut.setBorder(BorderFactory.createTitledBorder("Périmètre"));
 
         JTabbedPane onglets = new JTabbedPane();
-        onglets.addTab("En-têtes", ongletEntetes());
+        onglets.addTab("En-têtes / paramètres", ongletEntetes());
         onglets.addTab("Rechercher / remplacer", ongletRemplacer());
 
         JTable tableApercu = new JTable(modeleApercu);
@@ -149,12 +156,45 @@ public class FenetreModificationMasse extends JDialog {
         contenu.setBorder(BorderFactory.createEmptyBorder(6, 6, 6, 6));
         contenu.add(split, BorderLayout.CENTER);
         setContentPane(contenu);
-        setSize(1000, 680);
+        setSize(1000, 700);
         setLocationRelativeTo(parent);
+        majCible();
+        majApercu(Collections.<Modification>emptyList());
+    }
+
+    private Cible cible() {
+        return radioParametre.isSelected() ? Cible.PARAMETRE : Cible.ENTETE;
+    }
+
+    /** Libellés et liste des noms selon la cible choisie. */
+    private void majCible() {
+        boolean entete = cible() == Cible.ENTETE;
+        lblNom.setText(entete ? "En-tête :" : "Paramètre :");
+        caseAjouter.setText(entete ? "Ajouter l'en-tête aux gestionnaires d'en-têtes où il manque"
+                : "Ajouter le paramètre aux requêtes où il manque");
+        apercuSupprimer.setText(entete ? "Aperçu : supprimer l'en-tête" : "Aperçu : supprimer le paramètre");
+        champValeurEntete.setToolTipText(entete ? "Par exemple : Bearer ${token}" : "Par exemple : ${client}");
+        modeleEntetes.setTitre(entete ? "En-tête" : "Paramètre");
+        tableEntetes.getColumnModel().getColumn(0).setHeaderValue(entete ? "En-tête" : "Paramètre");
+        tableEntetes.getTableHeader().repaint();
+        champNomEntete.setText("");
+        modeleEntetes.remplir(MoteurModification.noms(perimetre, cible()));
         majApercu(Collections.<Modification>emptyList());
     }
 
     private JComponent ongletEntetes() {
+        ButtonGroup groupe = new ButtonGroup();
+        groupe.add(radioEntete);
+        groupe.add(radioParametre);
+        radioEntete.addActionListener(e -> majCible());
+        radioParametre.addActionListener(e -> majCible());
+        radioParametre.setToolTipText("Paramètres d'URL ou de formulaire ; nom sensible à la casse ;"
+                + " les requêtes à corps brut (Body Data) sont ignorées");
+        JPanel choixCible = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
+        choixCible.add(new JLabel("Modifier :"));
+        choixCible.add(radioEntete);
+        choixCible.add(radioParametre);
+
         tableEntetes.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         tableEntetes.getColumnModel().getColumn(0).setPreferredWidth(180);
         tableEntetes.getColumnModel().getColumn(1).setMaxWidth(110);
@@ -162,7 +202,7 @@ public class FenetreModificationMasse extends JDialog {
         tableEntetes.getSelectionModel().addListSelectionListener(e -> {
             int i = tableEntetes.getSelectedRow();
             if (!e.getValueIsAdjusting() && i >= 0) {
-                StatEntete s = modeleEntetes.get(tableEntetes.convertRowIndexToModel(i));
+                StatNom s = modeleEntetes.get(tableEntetes.convertRowIndexToModel(i));
                 champNomEntete.setText(s.getNom());
                 if (s.getValeurs().size() == 1) {
                     champValeurEntete.setText(s.getValeurs().iterator().next());
@@ -172,22 +212,21 @@ public class FenetreModificationMasse extends JDialog {
         JButton apercuDefinir = new JButton("Aperçu : donner cette valeur");
         apercuDefinir.addActionListener(e -> {
             if (champNomEntete.getText().trim().isEmpty()) {
-                lblApercu.setText("Choisir ou saisir le nom de l'en-tête.");
+                lblApercu.setText("Choisir ou saisir un nom dans la liste.");
                 return;
             }
-            majApercu(MoteurModification.definirEntete(perimetre, champNomEntete.getText().trim(),
+            majApercu(MoteurModification.definir(perimetre, cible(), champNomEntete.getText().trim(),
                     champValeurEntete.getText(), caseAjouter.isSelected()));
         });
-        JButton apercuSupprimer = new JButton("Aperçu : supprimer l'en-tête");
         apercuSupprimer.addActionListener(e -> {
             if (!champNomEntete.getText().trim().isEmpty()) {
-                majApercu(MoteurModification.supprimerEntete(perimetre, champNomEntete.getText().trim()));
+                majApercu(MoteurModification.supprimer(perimetre, cible(), champNomEntete.getText().trim()));
             }
         });
 
         JPanel formulaire = new JPanel(new GridBagLayout());
         GridBagConstraints g = contraintes();
-        formulaire.add(new JLabel("En-tête :"), g);
+        formulaire.add(lblNom, g);
         g.gridx = 1;
         formulaire.add(champNomEntete, g);
         g.gridx = 0;
@@ -203,9 +242,9 @@ public class FenetreModificationMasse extends JDialog {
         b.add(apercuDefinir);
         b.add(apercuSupprimer);
         formulaire.add(b, g);
-        champValeurEntete.setToolTipText("Par exemple : Bearer ${token}");
 
         JPanel p = new JPanel(new BorderLayout(4, 4));
+        p.add(choixCible, BorderLayout.NORTH);
         JScrollPane defil = new JScrollPane(tableEntetes);
         defil.setPreferredSize(new Dimension(600, 120));
         p.add(defil, BorderLayout.CENTER);
@@ -274,7 +313,7 @@ public class FenetreModificationMasse extends JDialog {
         int gestionnaires = MoteurModification.compter(perimetre, HeaderManager.class);
         lblPerimetre.setText(String.format("%d élément(s) sélectionné(s) → %d requête(s) HTTP, %d gestionnaire(s) d'en-têtes",
                 selection == null ? 0 : selection.length, requetes, gestionnaires));
-        modeleEntetes.remplir(MoteurModification.entetes(perimetre));
+        modeleEntetes.remplir(MoteurModification.noms(perimetre, cible()));
         majApercu(Collections.<Modification>emptyList());
     }
 
@@ -348,15 +387,20 @@ public class FenetreModificationMasse extends JDialog {
 
     private static final class ModeleEntetes extends AbstractTableModel {
         private static final long serialVersionUID = 1L;
-        private final List<StatEntete> lignes = new ArrayList<>();
+        private final List<StatNom> lignes = new ArrayList<>();
+        private String titre = "En-tête";
 
-        void remplir(List<StatEntete> l) {
+        void setTitre(String t) {
+            titre = t;
+        }
+
+        void remplir(List<StatNom> l) {
             lignes.clear();
             lignes.addAll(l);
             fireTableDataChanged();
         }
 
-        StatEntete get(int i) {
+        StatNom get(int i) {
             return lignes.get(i);
         }
 
@@ -372,12 +416,12 @@ public class FenetreModificationMasse extends JDialog {
 
         @Override
         public String getColumnName(int c) {
-            return new String[] { "En-tête", "Occurrences", "Valeurs" }[c];
+            return new String[] { titre, "Occurrences", "Valeurs" }[c];
         }
 
         @Override
         public Object getValueAt(int r, int c) {
-            StatEntete s = lignes.get(r);
+            StatNom s = lignes.get(r);
             switch (c) {
             case 0:
                 return s.getNom();
