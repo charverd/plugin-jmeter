@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Essai de bout en bout dans un vrai JMeter, sous écran virtuel : sélection
 # multiple de deux transactions sur trois, menu clic droit, fenêtre
-# « Modification en masse » (en-tête, paramètre, puis rechercher / remplacer), puis
+# « Modification en masse » (en-tête, paramètre, rechercher / remplacer,
+# recherche de transactions, renommage), puis
 # enregistrement du plan par la commande « Enregistrer » de JMeter, et
 # vérification du fichier.
 # Usage : JMETER_HOME=/chemin/apache-jmeter-x.y.z ./lancer.sh
@@ -45,11 +46,12 @@ def verifier(quoi, cond):
     ok = ok and cond
 blocs = re.split(r'(?=<TransactionController )', xml)[1:]
 par_tc = {re.search(r'testname="([^"]+)"', b).group(1): b for b in blocs}
-for tc in ("TC_01_Connexion", "TC_02_Commande"):
+for tc in ("Parcours_01_Connexion", "Parcours_02_Commande"):
     b = par_tc[tc]
     verifier(f"fichier : {tc} a Bearer ${{token}} sur ses 2 requêtes", b.count("Bearer ${token}") == 2)
     verifier(f"fichier : {tc} a ${{serveur}} sur ses 2 requêtes", b.count('<stringProp name="HTTPSampler.domain">${serveur}</stringProp>') == 2)
     verifier(f"fichier : {tc} garde ses X-Correlation", "abc-1" in b and "abc-2" in b)
+    verifier(f"fichier : requêtes de {tc} renommées {tc}_R01 et _R02", f'testname="{tc}_R01"' in b and f'testname="{tc}_R02"' in b)
     verifier(f"fichier : {tc} a client = ${{client}} sur ses 2 requêtes", b.count('<stringProp name="Argument.value">${client}</stringProp>') == 2)
 b = par_tc["TC_03_Deconnexion"]
 verifier("fichier : TC_03 inchangée", "Bearer jeton3" in b and "${" not in b)

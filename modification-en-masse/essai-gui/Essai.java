@@ -99,8 +99,9 @@ public class Essai {
     List<JTable> tables = tables(d.getContentPane());
     JTable tEntetes = tables.get(0), tApercu = tables.get(1);
     edt(() -> { TableModel m = tEntetes.getModel(); for (int i = 0; i < m.getRowCount(); i++) if ("Authorization".equals(m.getValueAt(i, 0))) tEntetes.setRowSelectionInterval(i, i); });
+    // Ordre des champs : chercher des transactions, nom, valeur, rechercher, remplacer, puis onglet Renommer.
     List<JTextField> champs = champs(d.getContentPane());
-    edt(() -> { champs.get(1).setText("Bearer ${token}"); trouver(d.getContentPane(), JButton.class, "Aperçu : donner cette valeur").doClick(); });
+    edt(() -> { champs.get(2).setText("Bearer ${token}"); trouver(d.getContentPane(), JButton.class, "Aperçu : donner cette valeur").doClick(); });
     pause(300);
     verifier("aperçu : 4 modifications d'en-tête", tApercu.getRowCount() == 4);
     capture("2-apercu-entetes.png", d.getContentPane());
@@ -116,7 +117,7 @@ public class Essai {
     String titreColonne = String.valueOf(tEntetes.getColumnModel().getColumn(0).getHeaderValue());
     verifier("la liste montre les paramètres (colonne « " + titreColonne + " »)",
         "Paramètre".equals(titreColonne) && tEntetes.getRowCount() == 1 && "client".equals(tEntetes.getModel().getValueAt(0, 0)));
-    edt(() -> { tEntetes.setRowSelectionInterval(0, 0); champs.get(1).setText("${client}");
+    edt(() -> { tEntetes.setRowSelectionInterval(0, 0); champs.get(2).setText("${client}");
       trouver(d.getContentPane(), JButton.class, "Aperçu : donner cette valeur").doClick(); });
     pause(300);
     verifier("aperçu : 4 paramètres client", tApercu.getRowCount() == 4);
@@ -129,19 +130,61 @@ public class Essai {
     // 5. Onglet Rechercher / remplacer : serveur -> ${serveur}
     JTabbedPane onglets = trouver(d.getContentPane(), JTabbedPane.class, null);
     edt(() -> onglets.setSelectedIndex(1));
-    edt(() -> { champs.get(2).setText("app.exemple.fr"); champs.get(3).setText("${serveur}");
+    edt(() -> { champs.get(3).setText("app.exemple.fr"); champs.get(4).setText("${serveur}");
       trouver(d.getContentPane(), JButton.class, "Aperçu").doClick(); });
     pause(300);
     verifier("aperçu remplacement : 4 serveurs", tApercu.getRowCount() == 4);
     capture("3-apercu-remplacement.png", d.getContentPane());
     edt(() -> trouver(d.getContentPane(), JButton.class, "Appliquer les modifications cochées").doClick());
     pause(300);
+
+    // 5 bis. V3 : chercher des transactions et les ajouter à la sélection.
+    String avantRecherche = perimetre(d);
+    JList<?> trouvees = trouver(d.getContentPane(), JList.class, null);
+    edt(() -> { champs.get(0).setText(""); trouver(d.getContentPane(), JButton.class, "Chercher").doClick(); });
+    pause(300);
+    verifier("recherche vide : les 3 transactions du plan", trouvees.getModel().getSize() == 3);
+    edt(() -> { trouvees.setSelectedIndex(2); trouver(d.getContentPane(), JButton.class, "Ajouter à la sélection").doClick(); });
+    pause(800);
+    System.out.println("  périmètre avant / après ajout : " + avantRecherche + "  /  " + perimetre(d));
+    verifier("TC_03 ajoutée : 6 requêtes dans le périmètre", perimetre(d).contains("6 requête(s)"));
+    edt(() -> { champs.get(0).setText("^TC_0[12]"); trouver(d.getContentPane(), JCheckBox.class, "Regex").setSelected(true);
+      trouver(d.getContentPane(), JButton.class, "Chercher").doClick(); });
+    pause(300);
+    verifier("regex ^TC_0[12] : 2 transactions", trouvees.getModel().getSize() == 2);
+    edt(() -> { trouver(d.getContentPane(), JButton.class, "Tout choisir dans la liste").doClick();
+      trouver(d.getContentPane(), JButton.class, "Remplacer la sélection").doClick(); });
+    pause(800);
+    verifier("sélection remplacée : 2 transactions, 4 requêtes (" + perimetre(d) + ")", perimetre(d).startsWith("2 élément(s)") && perimetre(d).contains("4 requête(s)"));
+    verifier("l'arbre de JMeter suit (" + arbre.getSelectionCount() + " sélectionnés)", arbre.getSelectionCount() == 2);
+
+    // 5 ter. V3 : renommer transactions et requêtes.
+    edt(() -> onglets.setSelectedIndex(2));
+    List<JTextField> champsRen = champs(onglets.getComponentAt(2) instanceof Container ? (Container) onglets.getComponentAt(2) : d.getContentPane());
+    edt(() -> { trouver(d.getContentPane(), JCheckBox.class, "Requêtes (échantillonneurs)").setSelected(true);
+      champsRen.get(0).setText("TC_"); champsRen.get(1).setText("Parcours_"); champsRen.get(2).setText("{nom}");
+      trouver(d.getContentPane(), JButton.class, "Aperçu du renommage").doClick(); });
+    pause(300);
+    verifier("aperçu : 2 transactions + 4 requêtes à renommer (" + tApercu.getRowCount() + ")", tApercu.getRowCount() == 6);
+    capture("4-apercu-renommage.png", d.getContentPane());
+    edt(() -> trouver(d.getContentPane(), JButton.class, "Appliquer les modifications cochées").doClick());
+    pause(500);
+    verifier("transactions renommées dans l'arbre", noeud("Parcours_01_Connexion") != null && noeud("Parcours_02_Commande") != null && noeud("TC_03_Deconnexion") != null);
+    edt(() -> { trouver(d.getContentPane(), JCheckBox.class, "Contrôleurs de transaction").setSelected(false);
+      champsRen.get(0).setText(""); champsRen.get(2).setText("{parent}_R{n}");
+      trouver(d.getContentPane(), JButton.class, "Aperçu du renommage").doClick(); });
+    pause(300);
+    verifier("aperçu : 4 requêtes numérotées", tApercu.getRowCount() == 4);
+    edt(() -> trouver(d.getContentPane(), JButton.class, "Appliquer les modifications cochées").doClick());
+    pause(500);
+    verifier("requêtes : Parcours_01_Connexion_R01, _R02, Parcours_02_Commande_R01",
+        noeud("Parcours_01_Connexion_R01") != null && noeud("Parcours_01_Connexion_R02") != null && noeud("Parcours_02_Commande_R01") != null);
     edt(() -> d.setVisible(false));
 
     // 6. Piège de l'écran périmé : on navigue ailleurs, JMeter réécrit l'élément depuis l'écran.
     edt(() -> arbre.setSelectionPath(new TreePath(noeud("TC_03_Deconnexion").getPath())));
     pause(800);
-    verifier("après navigation, l'écran des en-têtes n'a pas écrasé la modification", auth("TC_01_Connexion", 1).equals("Bearer ${token}"));
+    verifier("après navigation, l'écran des en-têtes n'a pas écrasé la modification", auth("Parcours_01_Connexion", 1).equals("Bearer ${token}"));
 
     // 7. Enregistrer
     edt(() -> ActionRouter.getInstance().doActionNow(new java.awt.event.ActionEvent(arbre, 1, ActionNames.SAVE)));
@@ -149,6 +192,7 @@ public class Essai {
     System.out.println(echecs == 0 ? "TOUT EST BON (interface)" : echecs + " ECHEC(S)");
     System.exit(echecs);
   }
+  static String perimetre(JDialog d) { for (JLabel l : labels(d.getContentPane())) if (l.getText().contains("sélectionné(s) →")) return l.getText(); return ""; }
   static List<JLabel> labels(Container c) { List<JLabel> l = new ArrayList<>(); coll(c, JLabel.class, l); return l; }
   static List<JTable> tables(Container c) { List<JTable> l = new ArrayList<>(); coll(c, JTable.class, l); return l; }
   static List<JTextField> champs(Container c) { List<JTextField> l = new ArrayList<>(); coll(c, JTextField.class, l); return l; }

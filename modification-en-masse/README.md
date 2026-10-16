@@ -5,7 +5,10 @@ sélectionnés dans l'arbre JMeter, au lieu de cliquer sur chacun. Par
 exemple, donner `Bearer ${token}` à l'en-tête `Authorization`, ou `${client}`
 au paramètre `client`, dans toutes les requêtes de plusieurs transactions.
 
-**Version 0.2.0** : le premier onglet choisit sa cible, **en-tête HTTP** ou
+**Version 0.3.0** : **chercher des transactions** par leur nom et les ajouter
+à la sélection, et onglet **Renommer** (contrôleurs de transaction et
+requêtes : rechercher / remplacer, modèle de nom, numérotation).
+Depuis la 0.2.0, le premier onglet choisit sa cible, **en-tête HTTP** ou
 **paramètre de requête**.
 
 ![Aperçu d'une modification d'en-tête](docs/apercu-entetes.png)
@@ -14,8 +17,8 @@ au paramètre `client`, dans toutes les requêtes de plusieurs transactions.
 
 Compatible JMeter 5.4.3 et plus récent, Java 11 (bytecode Java 8).
 
-1. Fermer JMeter, **retirer l'ancienne version** (`modification-en-masse-0.1.0.jar`)
-   de `lib\ext` si elle y est, et copier `modification-en-masse-0.2.0.jar`
+1. Fermer JMeter, **retirer l'ancienne version** (`modification-en-masse-0.x.x.jar`)
+   de `lib\ext` si elle y est, et copier `modification-en-masse-0.3.0.jar`
    à la place (par exemple `C:\apache-jmeter-5.4.3\lib\ext\`).
 2. Relancer JMeter.
 
@@ -26,7 +29,8 @@ lui s'ouvre et tourne partout, injecteurs compris, sans le plugin.
 
 1. Dans l'arbre, sélectionner les éléments à modifier : **Ctrl+clic** pour
    en ajouter un, **Maj+clic** pour une plage. Des transactions, des
-   requêtes, un groupe d'unités entier…
+   requêtes, un groupe d'unités entier… (On peut aussi les trouver par
+   leur nom depuis la fenêtre : voir « Chercher des transactions ».)
 2. **Clic droit > Modification en masse…** (la sélection multiple est
    conservée), ou menu **Outils > Modification en masse…**.
 3. Préparer la modification dans l'un des deux onglets, puis cliquer sur
@@ -46,6 +50,20 @@ gestionnaires d'en-têtes placés sous elles. Le bandeau indique combien de
 requêtes et de gestionnaires d'en-têtes sont concernés. Options : ne prendre
 que les éléments sélectionnés eux-mêmes, ignorer ou non les éléments
 désactivés (ignorés par défaut).
+
+### Chercher des transactions
+
+Dans le cadre **Périmètre**, le champ **Chercher des transactions** liste les
+contrôleurs de transaction de **tout le plan** dont le nom contient le texte
+saisi (sans tenir compte des majuscules ; option *Regex* ; champ vide = toutes).
+Choisir dans la liste (Ctrl+clic, Maj+clic, ou **Tout choisir dans la
+liste**), puis :
+
+- **Ajouter à la sélection** : les transactions s'ajoutent à ce qui est déjà
+  sélectionné dans l'arbre ;
+- **Remplacer la sélection** : elles deviennent la sélection.
+
+La sélection de l'arbre de JMeter suit, et le périmètre est recalculé.
 
 ### Onglet « En-têtes / paramètres »
 
@@ -92,6 +110,38 @@ une variable JMeter, même en mode regex. En mode regex, `$1`, `$2`…
 reprennent les groupes capturés. Par exemple
 `/api/v(\d+)/commande/(\d+)` → `/api/v$1/commande/${id_$2}`.
 
+### Onglet « Renommer »
+
+![Aperçu d'un renommage](docs/apercu-renommage.png)
+
+Renomme, dans le périmètre, les **contrôleurs de transaction** (le nom de la
+transaction dans les résultats), les **requêtes** (tous les échantillonneurs),
+ou les deux :
+
+1. **Rechercher / Remplacer par** (facultatif) s'applique d'abord au nom, en
+   texte ou en regex (`$1`, `$2`… pour les groupes).
+2. **Nouveau nom** est un modèle :
+   - `{nom}` : le nom après remplacement ;
+   - `{n}` : un numéro, **à partir de** N, **sur** N chiffres (`01`, `02`…) ;
+   - `{parent}` : le nom de l'élément parent (son nouveau nom s'il est
+     renommé dans le même lot).
+3. La numérotation est propre à chaque type. Avec **Numéroter les requêtes
+   dans chaque transaction**, celle des requêtes repart du début dans chaque
+   contrôleur de transaction.
+
+Exemples :
+
+| Objectif | Renommer | Rechercher → Remplacer | Nouveau nom | Résultat |
+|---|---|---|---|---|
+| Préfixer les transactions | transactions | — | `Achat_{nom}` | `TC_01` → `Achat_TC_01` |
+| Renuméroter les transactions | transactions | `^TC_\d+_` → *(vide)*, regex | `T{n}_{nom}` | `TC_07_Login` → `T01_Login` |
+| Nommer les requêtes d'après leur transaction | requêtes | — | `{parent}_R{n}` | `/api/login-12` → `T01_Login_R01` |
+| Changer un mot partout | les deux | `TC_` → `Parcours_` | `{nom}` | `TC_01` → `Parcours_01` |
+
+Si le plan contient des **Module Controller**, l'aperçu le signale : ils
+désignent leur cible par son nom, à vérifier après un renommage de
+transaction.
+
 ### Sécurité
 
 - **Rien n'est modifié sans passer par l'aperçu.**
@@ -126,12 +176,15 @@ reprennent les groupes capturés. Par exemple
 
 ## Essais
 
-- `mvn test` : 20 tests du moteur (périmètre, en-têtes, paramètres de
+- `mvn test` : 27 tests du moteur (périmètre, en-têtes, paramètres de
   requête — casse, corps brut ignoré, ajout et annulation —, remplacement
-  texte et regex, noms, lignes décochées, modification périmée, annulation).
+  texte et regex, noms, recherche de transactions, renommage — modèle,
+  numérotation globale ou par transaction, `{parent}` —, lignes décochées,
+  modification périmée, annulation).
 - `essai-gui/lancer.sh` : essai dans la vraie interface de JMeter (5.4.3 par
   défaut) sous écran virtuel. Il sélectionne 2 transactions sur 3, passe par
-  le menu clic droit et la fenêtre (en-tête, paramètre, puis remplacement
-  du serveur),
+  le menu clic droit et la fenêtre (en-tête, paramètre, remplacement du
+  serveur, recherche et ajout de transactions, renommage des transactions
+  puis des requêtes),
   vérifie qu'un écran resté ouvert n'écrase pas la modification, enregistre
   par la commande *Enregistrer* puis relit le fichier.

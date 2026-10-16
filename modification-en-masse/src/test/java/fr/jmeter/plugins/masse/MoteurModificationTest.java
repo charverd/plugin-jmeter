@@ -299,4 +299,116 @@ class MoteurModificationTest {
         assertEquals("entete", entetes(tc1, 0).getFirstHeaderNamed("client").getValue());
         assertEquals("${client}", parametre(tc1, 0, "client"));
     }
+
+    // ------------------------------------------------------------------
+    // Chercher des transactions et renommer (V3)
+    // ------------------------------------------------------------------
+
+    private static JMeterTreeNode racine(JMeterTreeNode n) {
+        return (JMeterTreeNode) n.getRoot();
+    }
+
+    private static List<String> noms(List<JMeterTreeNode> l) {
+        List<String> r = new java.util.ArrayList<>();
+        for (JMeterTreeNode n : l) {
+            r.add(n.getName());
+        }
+        return r;
+    }
+
+    @Test
+    void chercherDesTransactionsDansToutLePlan() {
+        assertEquals(java.util.Arrays.asList("TC_01", "TC_02", "TC_03"),
+                noms(MoteurModification.chercherTransactions(racine(tc1), "", false)));
+        assertEquals(java.util.Arrays.asList("TC_02"),
+                noms(MoteurModification.chercherTransactions(racine(tc1), "tc_02", false)));
+        assertEquals(java.util.Arrays.asList("TC_01", "TC_03"),
+                noms(MoteurModification.chercherTransactions(racine(tc1), "^TC_0[13]$", true)));
+        // Les requêtes ne sont pas des transactions, même si leur nom correspond.
+        assertTrue(noms(MoteurModification.chercherTransactions(racine(tc1), "req", false)).isEmpty());
+    }
+
+    private static MoteurModification.Renommage renommage(MoteurModification.TypeRenomme... types) {
+        return new MoteurModification.Renommage().types(EnumSet.copyOf(java.util.Arrays.asList(types)));
+    }
+
+    @Test
+    void prefixerLesTransactionsSeulement() {
+        List<JMeterTreeNode> p = MoteurModification.perimetre(new JMeterTreeNode[] { tc1, tc2 }, true, false);
+        List<Modification> m = MoteurModification.renommer(p,
+                renommage(MoteurModification.TypeRenomme.TRANSACTIONS).modele("Achat_{nom}"));
+        assertEquals(2, m.size());
+        MoteurModification.appliquer(m);
+        assertEquals("Achat_TC_01", tc1.getName());
+        assertEquals("Achat_TC_02", tc2.getName());
+        assertEquals("TC_01/req-1", requete(tc1, 0).getName());
+        assertEquals("TC_03", tc3.getName());
+    }
+
+    @Test
+    void numeroterLesTransactions() {
+        List<JMeterTreeNode> p = MoteurModification.perimetre(new JMeterTreeNode[] { tc1, tc2, tc3 }, false, false);
+        MoteurModification.appliquer(MoteurModification.renommer(p,
+                renommage(MoteurModification.TypeRenomme.TRANSACTIONS)
+                        .remplacer("^TC_\\d+", "Etape", true, false)
+                        .modele("T{n}_{nom}").numerotation(10, 3, false)));
+        assertEquals("T010_Etape", tc1.getName());
+        assertEquals("T011_Etape", tc2.getName());
+        assertEquals("T012_Etape", tc3.getName());
+    }
+
+    @Test
+    void requetesNumeroteesDansChaqueTransactionAvecLeNouveauNomDuParent() {
+        List<JMeterTreeNode> p = MoteurModification.perimetre(new JMeterTreeNode[] { tc1, tc2 }, true, false);
+        MoteurModification.appliquer(MoteurModification.renommer(p,
+                renommage(MoteurModification.TypeRenomme.TRANSACTIONS, MoteurModification.TypeRenomme.REQUETES)
+                        .remplacer("TC_", "Parcours_", false, true)
+                        .modele("{nom}").numerotation(1, 2, true)));
+        // Le modèle {nom} ne numérote pas : seul le remplacement s'applique.
+        assertEquals("Parcours_01", tc1.getName());
+        assertEquals("Parcours_01/req-1", requete(tc1, 0).getName());
+
+        p = MoteurModification.perimetre(new JMeterTreeNode[] { tc1, tc2 }, true, false);
+        MoteurModification.appliquer(MoteurModification.renommer(p,
+                renommage(MoteurModification.TypeRenomme.REQUETES).modele("{parent}_R{n}").numerotation(1, 2, true)));
+        assertEquals("Parcours_01_R01", requete(tc1, 0).getName());
+        assertEquals("Parcours_01_R02", requete(tc1, 1).getName());
+        assertEquals("Parcours_02_R01", requete(tc2, 0).getName());
+        assertEquals("Parcours_02_R02", requete(tc2, 1).getName());
+    }
+
+    @Test
+    void parentRenommeDansLeMemeLot() {
+        List<JMeterTreeNode> p = MoteurModification.perimetre(new JMeterTreeNode[] { tc1 }, true, false);
+        List<Modification> m = MoteurModification.renommer(p,
+                renommage(MoteurModification.TypeRenomme.TRANSACTIONS, MoteurModification.TypeRenomme.REQUETES)
+                        .modele("X")
+                        .numerotation(1, 1, false));
+        // Transactions et requêtes prennent toutes « X » : rien ne distingue, mais tout est proposé.
+        assertEquals(3, m.size());
+        m = MoteurModification.renommer(p,
+                renommage(MoteurModification.TypeRenomme.TRANSACTIONS, MoteurModification.TypeRenomme.REQUETES)
+                        .remplacer("TC_01", "Connexion", false, true).modele("{nom}"));
+        MoteurModification.Bilan b = MoteurModification.appliquer(m);
+        assertEquals("Connexion", tc1.getName());
+        assertEquals("Connexion/req-2", requete(tc1, 1).getName());
+        MoteurModification.defaire(b);
+        assertEquals("TC_01", tc1.getName());
+        assertEquals("TC_01/req-2", requete(tc1, 1).getName());
+    }
+
+    @Test
+    void numerotationGlobaleDesRequetes() {
+        List<JMeterTreeNode> p = MoteurModification.perimetre(new JMeterTreeNode[] { tc1, tc2 }, true, false);
+        MoteurModification.appliquer(MoteurModification.renommer(p,
+                renommage(MoteurModification.TypeRenomme.REQUETES).modele("R{n}").numerotation(1, 2, false)));
+        assertEquals("R01", requete(tc1, 0).getName());
+        assertEquals("R04", requete(tc2, 1).getName());
+    }
+
+    @Test
+    void sansTypeCocheRienNEstRenomme() {
+        List<JMeterTreeNode> p = MoteurModification.perimetre(new JMeterTreeNode[] { tc1 }, true, false);
+        assertTrue(MoteurModification.renommer(p, new MoteurModification.Renommage().modele("X")).isEmpty());
+    }
 }

@@ -1,6 +1,7 @@
 package fr.jmeter.plugins.masse;
 
 import java.awt.BorderLayout;
+import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.GridBagConstraints;
@@ -23,6 +24,13 @@ import javax.swing.JComponent;
 import javax.swing.JDialog;
 import javax.swing.JLabel;
 import javax.swing.ButtonGroup;
+import javax.swing.DefaultListCellRenderer;
+import javax.swing.DefaultListModel;
+import javax.swing.JList;
+import javax.swing.JSpinner;
+import javax.swing.JTree;
+import javax.swing.SpinnerNumberModel;
+import javax.swing.tree.TreePath;
 import javax.swing.JPanel;
 import javax.swing.JRadioButton;
 import javax.swing.JScrollPane;
@@ -41,6 +49,8 @@ import org.apache.jmeter.protocol.http.sampler.HTTPSamplerBase;
 
 import fr.jmeter.plugins.masse.MoteurModification.Champ;
 import fr.jmeter.plugins.masse.MoteurModification.Cible;
+import fr.jmeter.plugins.masse.MoteurModification.Renommage;
+import fr.jmeter.plugins.masse.MoteurModification.TypeRenomme;
 import fr.jmeter.plugins.masse.MoteurModification.StatNom;
 
 /**
@@ -73,6 +83,22 @@ public class FenetreModificationMasse extends JDialog {
     private final JCheckBox caseRegex = new JCheckBox("Regex");
     private final JCheckBox caseCasse = new JCheckBox("Respecter la casse");
     private final Map<Champ, JCheckBox> casesChamps = new EnumMap<>(Champ.class);
+
+    private final JTextField champChercherTx = new JTextField(22);
+    private final JCheckBox caseRegexTx = new JCheckBox("Regex");
+    private final DefaultListModel<JMeterTreeNode> modeleTrouvees = new DefaultListModel<>();
+    private final JList<JMeterTreeNode> listeTrouvees = new JList<>(modeleTrouvees);
+    private final JLabel lblTrouvees = new JLabel(" ");
+
+    private final Map<TypeRenomme, JCheckBox> casesTypes = new EnumMap<>(TypeRenomme.class);
+    private final JTextField champRenRecherche = new JTextField(18);
+    private final JTextField champRenRemplacement = new JTextField(18);
+    private final JCheckBox caseRenRegex = new JCheckBox("Regex");
+    private final JCheckBox caseRenCasse = new JCheckBox("Respecter la casse");
+    private final JTextField champModele = new JTextField(Renommage.NOM, 22);
+    private final JSpinner spinDebut = new JSpinner(new SpinnerNumberModel(1, 0, 1_000_000, 1));
+    private final JSpinner spinChiffres = new JSpinner(new SpinnerNumberModel(2, 1, 9, 1));
+    private final JCheckBox caseParTransaction = new JCheckBox("Numéroter les requêtes dans chaque transaction", true);
 
     private final ModeleApercu modeleApercu = new ModeleApercu();
     private final JLabel lblApercu = new JLabel(" ");
@@ -112,11 +138,14 @@ public class FenetreModificationMasse extends JDialog {
         options.add(caseDesactives);
         options.add(boutonRelire);
         haut.add(options, g);
+        g.gridy++;
+        haut.add(panneauChercherTransactions(), g);
         haut.setBorder(BorderFactory.createTitledBorder("Périmètre"));
 
         JTabbedPane onglets = new JTabbedPane();
         onglets.addTab("En-têtes / paramètres", ongletEntetes());
         onglets.addTab("Rechercher / remplacer", ongletRemplacer());
+        onglets.addTab("Renommer", ongletRenommer());
 
         JTable tableApercu = new JTable(modeleApercu);
         tableApercu.getColumnModel().getColumn(0).setMaxWidth(30);
@@ -156,7 +185,7 @@ public class FenetreModificationMasse extends JDialog {
         contenu.setBorder(BorderFactory.createEmptyBorder(6, 6, 6, 6));
         contenu.add(split, BorderLayout.CENTER);
         setContentPane(contenu);
-        setSize(1000, 700);
+        setSize(1050, 820);
         setLocationRelativeTo(parent);
         majCible();
         majApercu(Collections.<Modification>emptyList());
@@ -250,6 +279,176 @@ public class FenetreModificationMasse extends JDialog {
         p.add(defil, BorderLayout.CENTER);
         p.add(formulaire, BorderLayout.SOUTH);
         return p;
+    }
+
+    /** « Chercher des transactions » : trouver dans tout le plan et ajouter à la sélection. */
+    private JComponent panneauChercherTransactions() {
+        listeTrouvees.setVisibleRowCount(4);
+        listeTrouvees.setCellRenderer(new DefaultListCellRenderer() {
+            private static final long serialVersionUID = 1L;
+
+            @Override
+            public Component getListCellRendererComponent(JList<?> l, Object v, int i, boolean sel, boolean f) {
+                return super.getListCellRendererComponent(l, MoteurModification.chemin((JMeterTreeNode) v), i, sel, f);
+            }
+        });
+        JButton chercher = new JButton("Chercher");
+        chercher.addActionListener(e -> chercherTransactions());
+        champChercherTx.addActionListener(e -> chercherTransactions());
+        champChercherTx.setToolTipText("Partie du nom des contrôleurs de transaction ; vide = toutes");
+        JButton ajouter = new JButton("Ajouter à la sélection");
+        ajouter.addActionListener(e -> selectionnerTrouvees(false));
+        JButton remplacerSel = new JButton("Remplacer la sélection");
+        remplacerSel.addActionListener(e -> selectionnerTrouvees(true));
+        JButton tout = new JButton("Tout choisir dans la liste");
+        tout.addActionListener(e -> {
+            if (!modeleTrouvees.isEmpty()) {
+                listeTrouvees.setSelectionInterval(0, modeleTrouvees.size() - 1);
+            }
+        });
+
+        JPanel ligne = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
+        ligne.add(new JLabel("Chercher des transactions :"));
+        ligne.add(champChercherTx);
+        ligne.add(caseRegexTx);
+        ligne.add(chercher);
+        ligne.add(lblTrouvees);
+        JPanel boutons = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
+        boutons.add(tout);
+        boutons.add(ajouter);
+        boutons.add(remplacerSel);
+        JPanel p = new JPanel(new BorderLayout(2, 2));
+        p.add(ligne, BorderLayout.NORTH);
+        JScrollPane defil = new JScrollPane(listeTrouvees);
+        defil.setPreferredSize(new Dimension(700, 80));
+        p.add(defil, BorderLayout.CENTER);
+        p.add(boutons, BorderLayout.SOUTH);
+        return p;
+    }
+
+    private void chercherTransactions() {
+        GuiPackage gp = GuiPackage.getInstance();
+        modeleTrouvees.clear();
+        try {
+            for (JMeterTreeNode n : MoteurModification.chercherTransactions(
+                    (JMeterTreeNode) gp.getTreeModel().getRoot(), champChercherTx.getText().trim(),
+                    caseRegexTx.isSelected())) {
+                modeleTrouvees.addElement(n);
+            }
+            lblTrouvees.setText(modeleTrouvees.size() + " transaction(s) trouvée(s)");
+        } catch (PatternSyntaxException ex) {
+            lblTrouvees.setText("Expression invalide : " + ex.getDescription());
+        }
+    }
+
+    /** Sélectionne dans l'arbre de JMeter les transactions choisies dans la liste. */
+    private void selectionnerTrouvees(boolean remplacer) {
+        List<JMeterTreeNode> choisies = listeTrouvees.getSelectedValuesList();
+        if (choisies.isEmpty()) {
+            lblTrouvees.setText("Choisir des transactions dans la liste (Ctrl+clic, Maj+clic).");
+            return;
+        }
+        TreePath[] chemins = new TreePath[choisies.size()];
+        for (int i = 0; i < chemins.length; i++) {
+            chemins[i] = new TreePath(choisies.get(i).getPath());
+        }
+        JTree arbre = GuiPackage.getInstance().getTreeListener().getJTree();
+        if (remplacer) {
+            arbre.setSelectionPaths(chemins);
+        } else {
+            arbre.addSelectionPaths(chemins);
+        }
+        arbre.scrollPathToVisible(chemins[0]);
+        relireSelection();
+        lblTrouvees.setText(choisies.size() + (remplacer ? " transaction(s) sélectionnée(s)" : " transaction(s) ajoutée(s)"));
+    }
+
+    private JComponent ongletRenommer() {
+        JPanel p = new JPanel(new GridBagLayout());
+        GridBagConstraints g = contraintes();
+        p.add(new JLabel("Renommer :"), g);
+        g.gridx = 1;
+        JPanel types = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
+        for (TypeRenomme t : TypeRenomme.values()) {
+            JCheckBox cb = new JCheckBox(t.getLibelle(), t == TypeRenomme.TRANSACTIONS);
+            casesTypes.put(t, cb);
+            types.add(cb);
+        }
+        p.add(types, g);
+        g.gridx = 0;
+        g.gridy++;
+        p.add(new JLabel("Rechercher :"), g);
+        g.gridx = 1;
+        JPanel rech = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
+        rech.add(champRenRecherche);
+        rech.add(new JLabel("Remplacer par :"));
+        rech.add(champRenRemplacement);
+        rech.add(caseRenRegex);
+        rech.add(caseRenCasse);
+        p.add(rech, g);
+        g.gridx = 0;
+        g.gridy++;
+        p.add(new JLabel("Nouveau nom :"), g);
+        g.gridx = 1;
+        JPanel mod = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
+        mod.add(champModele);
+        mod.add(new JLabel("{nom} = nom (après remplacement), {n} = numéro, {parent} = nom du parent"));
+        champModele.setToolTipText("Exemples : T{n}_{nom}   {parent}_R{n}   Achat_{nom}");
+        p.add(mod, g);
+        g.gridx = 0;
+        g.gridy++;
+        p.add(new JLabel("Numéro {n} :"), g);
+        g.gridx = 1;
+        JPanel num = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
+        num.add(new JLabel("à partir de"));
+        num.add(spinDebut);
+        num.add(new JLabel("sur"));
+        num.add(spinChiffres);
+        num.add(new JLabel("chiffres"));
+        num.add(caseParTransaction);
+        p.add(num, g);
+        g.gridy++;
+        JButton apercu = new JButton("Aperçu du renommage");
+        apercu.addActionListener(e -> apercuRenommage());
+        JPanel b = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        b.add(apercu);
+        p.add(b, g);
+        JPanel conteneur = new JPanel(new BorderLayout());
+        conteneur.add(p, BorderLayout.NORTH);
+        return conteneur;
+    }
+
+    private void apercuRenommage() {
+        Set<TypeRenomme> types = EnumSet.noneOf(TypeRenomme.class);
+        for (Map.Entry<TypeRenomme, JCheckBox> e : casesTypes.entrySet()) {
+            if (e.getValue().isSelected()) {
+                types.add(e.getKey());
+            }
+        }
+        if (types.isEmpty()) {
+            majApercu(Collections.<Modification>emptyList());
+            lblApercu.setText("Cocher au moins un type d'élément à renommer.");
+            return;
+        }
+        Renommage r = new Renommage().types(types)
+                .remplacer(champRenRecherche.getText(), champRenRemplacement.getText(), caseRenRegex.isSelected(),
+                        caseRenCasse.isSelected())
+                .modele(champModele.getText())
+                .numerotation((Integer) spinDebut.getValue(), (Integer) spinChiffres.getValue(),
+                        caseParTransaction.isSelected());
+        try {
+            List<Modification> modifs = MoteurModification.renommer(perimetre, r);
+            majApercu(modifs);
+            int modules = MoteurModification.compterModuleControllers(
+                    (JMeterTreeNode) GuiPackage.getInstance().getTreeModel().getRoot());
+            if (modules > 0 && !modifs.isEmpty()) {
+                lblApercu.setText(lblApercu.getText() + " — attention : le plan contient " + modules
+                        + " Module Controller, qui désignent leur cible par son nom");
+            }
+        } catch (PatternSyntaxException ex) {
+            majApercu(Collections.<Modification>emptyList());
+            lblApercu.setText("Expression invalide : " + ex.getDescription());
+        }
     }
 
     private JComponent ongletRemplacer() {

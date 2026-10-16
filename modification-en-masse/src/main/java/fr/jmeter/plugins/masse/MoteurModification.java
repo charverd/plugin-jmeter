@@ -20,11 +20,13 @@ import javax.swing.tree.TreeNode;
 
 import org.apache.jmeter.config.Argument;
 import org.apache.jmeter.config.Arguments;
+import org.apache.jmeter.control.TransactionController;
 import org.apache.jmeter.gui.tree.JMeterTreeNode;
 import org.apache.jmeter.protocol.http.control.Header;
 import org.apache.jmeter.protocol.http.control.HeaderManager;
 import org.apache.jmeter.protocol.http.sampler.HTTPSamplerBase;
 import org.apache.jmeter.protocol.http.util.HTTPArgument;
+import org.apache.jmeter.samplers.Sampler;
 import org.apache.jmeter.testelement.TestElement;
 import org.apache.jmeter.testelement.TestPlan;
 import org.apache.jmeter.testelement.property.JMeterProperty;
@@ -473,6 +475,195 @@ public final class MoteurModification {
             modifs.add(new Modification(n, ch, champ, avant, apres, lire,
                     () -> ecrire.accept(apres), () -> ecrire.accept(avant)));
         }
+    }
+
+    // ------------------------------------------------------------------
+    // Chercher des transactions dans tout le plan
+    // ------------------------------------------------------------------
+
+    /**
+     * Contrôleurs de transaction de tout l'arbre dont le nom correspond,
+     * dans l'ordre de l'arbre. Un motif vide les rend tous.
+     *
+     * @throws java.util.regex.PatternSyntaxException si la regex est invalide
+     */
+    public static List<JMeterTreeNode> chercherTransactions(JMeterTreeNode racine, String motif,
+            boolean regex) {
+        List<JMeterTreeNode> trouves = new ArrayList<>();
+        Pattern p = motif == null || motif.isEmpty() ? null
+                : Pattern.compile(regex ? motif : Pattern.quote(motif),
+                        Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
+        parcourir(racine, n -> {
+            if (n.getTestElement() instanceof TransactionController
+                    && (p == null || p.matcher(n.getName()).find())) {
+                trouves.add(n);
+            }
+        });
+        return trouves;
+    }
+
+    private static void parcourir(JMeterTreeNode n, Consumer<JMeterTreeNode> action) {
+        if (n == null) {
+            return;
+        }
+        action.accept(n);
+        Enumeration<?> enfants = n.children();
+        while (enfants.hasMoreElements()) {
+            parcourir((JMeterTreeNode) enfants.nextElement(), action);
+        }
+    }
+
+    /** Nombre de Module Controller du plan : ils désignent leur cible par son nom. */
+    public static int compterModuleControllers(JMeterTreeNode racine) {
+        int[] n = { 0 };
+        parcourir(racine, x -> {
+            if ("org.apache.jmeter.control.ModuleController".equals(x.getTestElement().getClass().getName())) {
+                n[0]++;
+            }
+        });
+        return n[0];
+    }
+
+    // ------------------------------------------------------------------
+    // Renommer
+    // ------------------------------------------------------------------
+
+    /** Les éléments que l'onglet « Renommer » sait viser. */
+    public enum TypeRenomme {
+        TRANSACTIONS("Contrôleurs de transaction"),
+        REQUETES("Requêtes (échantillonneurs)");
+
+        private final String libelle;
+
+        TypeRenomme(String libelle) {
+            this.libelle = libelle;
+        }
+
+        public String getLibelle() {
+            return libelle;
+        }
+
+        boolean vise(TestElement e) {
+            return this == TRANSACTIONS ? e instanceof TransactionController : e instanceof Sampler;
+        }
+    }
+
+    /** Réglages de l'onglet « Renommer ». */
+    public static final class Renommage {
+        /** Remplacé par le nom (après rechercher / remplacer). */
+        public static final String NOM = "{nom}";
+        /** Remplacé par le numéro, sur {@link #chiffres} chiffres. */
+        public static final String NUMERO = "{n}";
+        /** Remplacé par le nom (éventuellement nouveau) de l'élément parent. */
+        public static final String PARENT = "{parent}";
+
+        Set<TypeRenomme> types = EnumSet.noneOf(TypeRenomme.class);
+        String recherche = "";
+        String remplacement = "";
+        boolean regex;
+        boolean sensibleCasse;
+        String modele = NOM;
+        int debut = 1;
+        int chiffres = 2;
+        boolean numeroterParTransaction;
+
+        public Renommage types(Set<TypeRenomme> t) {
+            types = t.isEmpty() ? EnumSet.noneOf(TypeRenomme.class) : EnumSet.copyOf(t);
+            return this;
+        }
+
+        public Renommage remplacer(String r, String par, boolean rx, boolean casse) {
+            recherche = r == null ? "" : r;
+            remplacement = par == null ? "" : par;
+            regex = rx;
+            sensibleCasse = casse;
+            return this;
+        }
+
+        public Renommage modele(String m) {
+            modele = m == null || m.trim().isEmpty() ? NOM : m;
+            return this;
+        }
+
+        public Renommage numerotation(int depart, int nbChiffres, boolean parTransaction) {
+            debut = depart;
+            chiffres = Math.max(1, nbChiffres);
+            numeroterParTransaction = parTransaction;
+            return this;
+        }
+    }
+
+    /**
+     * Prépare le renommage des éléments visés du périmètre, dans l'ordre de
+     * l'arbre. Chaque type a sa propre numérotation ; avec
+     * {@code numeroterParTransaction}, celle des requêtes repart à
+     * {@code debut} dans chaque contrôleur de transaction. Les transactions
+     * sont renommées d'abord, pour que {@code {parent}} donne leur nouveau nom.
+     *
+     * @throws java.util.regex.PatternSyntaxException si la regex est invalide
+     */
+    public static List<Modification> renommer(Collection<JMeterTreeNode> perimetre, Renommage r) {
+        Pattern motif = null;
+        String rempl = null;
+        if (!r.recherche.isEmpty()) {
+            int options = r.sensibleCasse ? 0 : Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE;
+            motif = Pattern.compile(r.regex ? r.recherche : Pattern.quote(r.recherche), options);
+            rempl = r.regex ? r.remplacement.replace("${", "\\${") : Matcher.quoteReplacement(r.remplacement);
+        }
+        Map<JMeterTreeNode, String> nouveaux = new LinkedHashMap<>();
+        for (TypeRenomme type : new TypeRenomme[] { TypeRenomme.TRANSACTIONS, TypeRenomme.REQUETES }) {
+            if (!r.types.contains(type)) {
+                continue;
+            }
+            Map<Object, Integer> compteurs = new LinkedHashMap<>();
+            for (JMeterTreeNode n : perimetre) {
+                if (!type.vise(n.getTestElement())) {
+                    continue;
+                }
+                Object cle = type == TypeRenomme.REQUETES && r.numeroterParTransaction ? transactionParente(n) : type;
+                int numero = compteurs.merge(cle == null ? type : cle, 1, Integer::sum) - 1 + r.debut;
+                String nom = n.getName();
+                if (motif != null) {
+                    nom = motif.matcher(nom).replaceAll(rempl);
+                }
+                JMeterTreeNode parent = (JMeterTreeNode) n.getParent();
+                String nomParent = parent == null ? "" : nouveaux.getOrDefault(parent, parent.getName());
+                String apres = r.modele.replace(Renommage.NOM, nom)
+                        .replace(Renommage.NUMERO, numeroter(numero, r.chiffres))
+                        .replace(Renommage.PARENT, nomParent);
+                nouveaux.put(n, apres);
+            }
+        }
+        List<Modification> modifs = new ArrayList<>();
+        // Ordre de l'arbre pour l'aperçu.
+        for (JMeterTreeNode n : perimetre) {
+            String apres = nouveaux.get(n);
+            if (apres != null && !apres.equals(n.getName())) {
+                TestElement e = n.getTestElement();
+                String avant = e.getName();
+                modifs.add(new Modification(n, chemin(n), "Nom", avant, apres, e::getName,
+                        () -> e.setName(apres), () -> e.setName(avant)));
+            }
+        }
+        return modifs;
+    }
+
+    private static JMeterTreeNode transactionParente(JMeterTreeNode n) {
+        for (TreeNode p = n.getParent(); p instanceof JMeterTreeNode; p = p.getParent()) {
+            if (((JMeterTreeNode) p).getTestElement() instanceof TransactionController) {
+                return (JMeterTreeNode) p;
+            }
+        }
+        return null;
+    }
+
+    private static String numeroter(int n, int chiffres) {
+        String s = Integer.toString(n);
+        StringBuilder sb = new StringBuilder();
+        for (int i = s.length(); i < chiffres; i++) {
+            sb.append('0');
+        }
+        return sb.append(s).toString();
     }
 
     // ------------------------------------------------------------------

@@ -11,7 +11,7 @@
   </parent>
 
   <artifactId>modification-en-masse</artifactId>
-  <version>0.2.0</version>
+  <version>0.3.0</version>
   <name>Modification en masse</name>
   <description>Modifier d'un coup les requêtes et en-têtes des éléments sélectionnés dans l'arbre JMeter.</description>
 
