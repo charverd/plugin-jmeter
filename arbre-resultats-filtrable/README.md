@@ -102,7 +102,10 @@ La logique de filtre est isolée dans `FiltreNoms`, sans Swing, et testée par
 ## Essais
 
 - `mvn test` : tests unitaires du filtre.
-- `essai-gui/lancer.sh` : essai de bout en bout dans un vrai JMeter 5.6.3,
+- `essai-gui/lancer.sh` : essai de bout en bout dans un vrai JMeter (5.4.3
+  par défaut, `JMETER_VERSION` pour une autre),
   sous écran virtuel (Xvfb) — tir d'un plan avec transactions, chargement du
   JTL dans le visualiseur, vérification du filtre, de la copie et de la
-  fenêtre des noms. Télécharge JMeter si `JMETER_HOME` n'est pas défini.
+  fenêtre des noms. Télécharge JMeter si `JMETER_HOME` n'est pas défini ;
+  utilise le Java de `JAVA_HOME`. Passé sur JMeter 5.4.3 / Java 11 et
+  JMeter 5.6.3 / Java 21.

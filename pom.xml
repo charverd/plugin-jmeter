@@ -6,7 +6,7 @@
 
   <groupId>fr.charverd.jmeter</groupId>
   <artifactId>plugins-jmeter</artifactId>
-  <version>0.1.0-SNAPSHOT</version>
+  <version>0.1.0</version>
   <packaging>pom</packaging>
   <name>Plugins JMeter</name>
 
@@ -16,9 +16,9 @@
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <!-- JMeter 5.6 tourne encore sur Java 8 : on vise le plus large. -->
+    <!-- Bytecode Java 8 : tourne sur les JDK 8, 11, 17 et 21. -->
     <maven.compiler.release>8</maven.compiler.release>
-    <jmeter.version>5.6.3</jmeter.version>
+    <jmeter.version>5.4.3</jmeter.version>
     <junit.version>5.11.4</junit.version>
   </properties>
 

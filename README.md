@@ -8,7 +8,7 @@ Plugins maison pour Apache JMeter, un module Maven par plugin.
 
 ## Construire
 
-Java 8 ou plus récent, Maven 3.9.
+Java 11 (ou 8+), Maven 3.9.
 
 ```bash
 mvn package
@@ -17,8 +17,9 @@ mvn package
 Chaque module produit un jar dans son dossier `target/`. Pour l'installer :
 copier ce jar dans `lib/ext/` de JMeter, puis redémarrer JMeter.
 
-Les modules ciblent JMeter **5.6.3** (propriété `jmeter.version` du pom
-parent). Les dépendances JMeter sont en scope `provided` : le jar ne contient
+Les modules sont compilés contre JMeter **5.4.3**, la plus ancienne version
+visée (propriété `jmeter.version` du pom parent), en bytecode Java 8 : ils
+tournent sur JMeter 5.4.3 et suivants, sous Java 8 à 21. Les dépendances JMeter sont en scope `provided` : le jar ne contient
 que le code du plugin.
 
 ## Ajouter un plugin
