@@ -40,7 +40,7 @@
         </DebugSampler>
         <hashTree/>
       </hashTree>
-      <ResultCollector guiclass="fr.charverd.jmeter.arbre.ArbreResultatsFiltrableVisualizer" testclass="ResultCollector" testname="Arbre de résultats filtrable">
+      <ResultCollector guiclass="fr.jmeter.plugins.arbre.ArbreResultatsFiltrableVisualizer" testclass="ResultCollector" testname="Arbre de résultats filtrable">
         <boolProp name="ResultCollector.error_logging">false</boolProp>
         <stringProp name="filename">resultats.jtl</stringProp>
         <stringProp name="ArbreFiltrable.motif">catalogue</stringProp>

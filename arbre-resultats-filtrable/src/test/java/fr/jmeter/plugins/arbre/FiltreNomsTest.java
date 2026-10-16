@@ -1,4 +1,4 @@
-package fr.charverd.jmeter.arbre;
+package fr.jmeter.plugins.arbre;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;

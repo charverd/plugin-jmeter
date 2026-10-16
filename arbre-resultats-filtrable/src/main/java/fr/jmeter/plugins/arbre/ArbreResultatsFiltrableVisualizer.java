@@ -1,4 +1,4 @@
-package fr.charverd.jmeter.arbre;
+package fr.jmeter.plugins.arbre;
 
 import java.awt.BorderLayout;
 import java.awt.Color;

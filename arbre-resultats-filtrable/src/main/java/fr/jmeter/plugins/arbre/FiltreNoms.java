@@ -1,4 +1,4 @@
-package fr.charverd.jmeter.arbre;
+package fr.jmeter.plugins.arbre;
 
 import java.util.Collection;
 import java.util.Locale;

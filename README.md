@@ -27,4 +27,4 @@ que le code du plugin.
 1. Créer un dossier de module avec un `pom.xml` dont le parent est
    `plugins-jmeter`.
 2. Le déclarer dans `<modules>` du pom racine.
-3. Paquet Java : `fr.charverd.jmeter.<plugin>`.
+3. Paquet Java : `fr.jmeter.plugins.<plugin>`.

@@ -14,7 +14,7 @@ import org.apache.jmeter.util.JMeterUtils;
 import org.apache.jorphan.collections.HashTree;
 import org.apache.jorphan.collections.SearchByClass;
 import org.apache.jorphan.reflect.ClassFinder;
-import fr.charverd.jmeter.arbre.ArbreResultatsFiltrableVisualizer;
+import fr.jmeter.plugins.arbre.ArbreResultatsFiltrableVisualizer;
 
 public class Essai {
   static ArbreResultatsFiltrableVisualizer viz; static JFrame frame;

@@ -5,9 +5,9 @@
   <modelVersion>4.0.0</modelVersion>
 
   <parent>
-    <groupId>fr.charverd.jmeter</groupId>
+    <groupId>fr.jmeter.plugins</groupId>
     <artifactId>plugins-jmeter</artifactId>
-    <version>0.1.0</version>
+    <version>0.1.1</version>
   </parent>
 
   <artifactId>arbre-resultats-filtrable</artifactId>
