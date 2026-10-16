@@ -4,3 +4,5 @@ target/
 *.iml
 .vscode/
 jmeter.log
+outils/bonsai/sorties/
+outils/bonsai/etat.txt

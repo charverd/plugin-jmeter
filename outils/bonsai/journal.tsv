@@ -1,0 +1,6 @@
+date	tache	duree_s	tokens_prompt	tokens_generes	car_raisonnement	car_reponse	fin	fichiers	lignes
+2026-10-16 21:31	v1-regles-verificateur	1477	2717	24000	95782	0	length	0	0
+2026-10-16 21:41	n1-logique-nettoyage	1789	1837	24000	84967	0	length	0	0
+2026-10-16 21:45	c1-logique-correlation	2013	2499	28000	101937	0	length	0	0
+2026-10-16 21:49	v1a-regles-01-07	1032	2265	16025	64099	0	stop	0	0
+2026-10-16 22:09	v1b-regles-08-14	1202	2177	32000	127498	0	length	0	0

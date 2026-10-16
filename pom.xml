@@ -14,6 +14,9 @@
     <module>arbre-resultats-filtrable</module>
     <module>enregistreur-sans-variables</module>
     <module>modification-en-masse</module>
+    <module>verificateur-script</module>
+    <module>nettoyage-enregistrement</module>
+    <module>correlation-assistee</module>
   </modules>
 
   <properties>
