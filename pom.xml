@@ -18,6 +18,7 @@
     <module>nettoyage-enregistrement</module>
     <module>correlation-assistee</module>
     <module>assistant-ia</module>
+    <module>sauvegarde-arbre-html</module>
   </modules>
 
   <properties>

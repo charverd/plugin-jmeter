@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="generator" content="Sauvegarde HTML de l'arbre de résultats (plugin JMeter)">
+<title>__TITRE__</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body { font: 13px/1.4 "Segoe UI", Arial, sans-serif; color: #222; background: #f3f3f3;
+         display: flex; flex-direction: column; }
+  header { background: #2b4a6f; color: #fff; padding: 6px 12px; }
+  header h1 { font-size: 15px; margin: 0 0 2px; font-weight: 600; }
+  header .meta { font-size: 12px; opacity: .9; }
+  header .meta span + span::before { content: " · "; }
+  #barreArbres { padding: 6px 12px; background: #e4e9f0; border-bottom: 1px solid #c9d1dc; display: none; }
+  #barreArbres select { font: inherit; }
+  main { flex: 1; display: flex; min-height: 0; }
+  #gauche { width: 38%; min-width: 260px; display: flex; flex-direction: column; border-right: 1px solid #c9d1dc;
+            background: #fff; }
+  #filtre { padding: 6px 8px; border-bottom: 1px solid #ddd; background: #fafafa; }
+  #filtre .ligne { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  #filtre input[type=text] { flex: 1; min-width: 120px; font: inherit; padding: 2px 4px; }
+  #filtre label { white-space: nowrap; font-size: 12px; }
+  #filtre button { font: inherit; font-size: 12px; }
+  #etatFiltre { font-size: 12px; color: #555; margin-top: 3px; }
+  #etatFiltre.erreur { color: #b00020; }
+  #arbre { flex: 1; overflow: auto; padding: 4px 0; }
+  #arbre ul { list-style: none; margin: 0; padding-left: 16px; }
+  #arbre > ul { padding-left: 4px; }
+  #arbre li { margin: 0; }
+  .noeud { display: flex; align-items: center; gap: 3px; cursor: pointer; padding: 1px 4px; border-radius: 2px;
+           white-space: nowrap; }
+  .noeud:hover { background: #eef3fa; }
+  .noeud.sel { background: #cfe0f5; }
+  .bascule { width: 12px; text-align: center; color: #666; flex: none; font-size: 10px; }
+  .icone { width: 14px; text-align: center; font-weight: bold; flex: none; }
+  .ok > .noeud .icone { color: #1b8a2f; }
+  .ko > .noeud .icone { color: #c62828; }
+  .ko > .noeud .nom { color: #c62828; }
+  .tx > .noeud .nom { font-weight: 600; }
+  .ferme > ul { display: none; }
+  #droite { flex: 1; display: flex; flex-direction: column; min-width: 0; background: #fff; }
+  .onglets { display: flex; gap: 2px; padding: 6px 8px 0; background: #f6f6f6; border-bottom: 1px solid #ccc; }
+  .onglets button { font: inherit; border: 1px solid #ccc; border-bottom: none; background: #e9e9e9;
+                    padding: 3px 10px; cursor: pointer; border-radius: 3px 3px 0 0; }
+  .onglets button.actif { background: #fff; position: relative; top: 1px; }
+  .sousonglets { padding: 4px 8px 0; background: #fff; border-bottom: 1px solid #e3e3e3; }
+  .sousonglets .onglets { background: #fff; padding: 0; border: none; }
+  #contenu { flex: 1; overflow: auto; padding: 8px 10px; }
+  pre { margin: 0; font: 12px/1.45 Consolas, "DejaVu Sans Mono", monospace; white-space: pre-wrap;
+        word-break: break-word; }
+  .note { background: #fff6d6; border: 1px solid #ecd67a; padding: 4px 8px; margin-bottom: 8px; font-size: 12px; }
+  .vide { color: #888; font-style: italic; padding: 20px; }
+  .c3 { color: #1b8a2f; } .c4 { color: #1f4fd1; } .c5 { color: #c62828; }
+  img.reponse { max-width: 100%; border: 1px solid #ddd; }
+  #aide { color: #777; font-size: 12px; padding: 0 8px 6px; }
+</style>
+</head>
+<body>
+<header>
+  <h1 id="titre"></h1>
+  <div class="meta" id="meta"></div>
+</header>
+<div id="barreArbres"><label>Arbre : <select id="choixArbre"></select></label></div>
+<main>
+  <section id="gauche">
+    <div id="filtre">
+      <div class="ligne">
+        <input type="text" id="motif" placeholder="Filtrer sur les noms…" spellcheck="false">
+        <button type="button" id="effacer" title="Effacer le filtre">✕</button>
+      </div>
+      <div class="ligne">
+        <label><input type="checkbox" id="regex"> Regex</label>
+        <label><input type="checkbox" id="casse"> Casse</label>
+        <label><input type="checkbox" id="exclure"> Exclure</label>
+        <label><input type="checkbox" id="transactions"> Transactions seules</label>
+        <button type="button" id="developper">Développer</button>
+        <button type="button" id="reduire">Réduire</button>
+      </div>
+      <div id="etatFiltre"></div>
+    </div>
+    <div id="arbre"></div>
+    <div id="aide">↑ ↓ pour parcourir, → ← pour déplier ou replier.</div>
+  </section>
+  <section id="droite">
+    <div class="onglets" id="onglets"></div>
+    <div class="sousonglets" id="sousonglets"></div>
+    <div id="contenu"><div class="vide">Sélectionner un résultat dans l'arbre.</div></div>
+  </section>
+</main>
+<script id="donnees" type="application/json">__DONNEES__</script>
+<script>
+(function () {
+  "use strict";
+  var D = JSON.parse(document.getElementById("donnees").textContent);
+  var L = D.libelles;
+  var PREFIXE_TX = "Number of samples in transaction : ";
+  var $ = function (id) { return document.getElementById(id); };
+  var arbreCourant = null, noeudSel = null, ongletSel = 0, sousOngletSel = {};
+
+  // ---------------------------------------------------------------- en-tête
+  $("titre").textContent = L.view_results_tree_title + " — " + D.plan;
+  var meta = [ "Sauvegardé le " + D.date ];
+  if (D.origine) { meta.push(D.origine); }
+  if (D.fichierPlan) { meta.push(D.fichierPlan); }
+  meta.forEach(function (m) { var s = document.createElement("span"); s.textContent = m; $("meta").appendChild(s); });
+
+  if (D.arbres.length > 1) {
+    $("barreArbres").style.display = "block";
+    D.arbres.forEach(function (a, i) {
+      var o = document.createElement("option");
+      o.value = i;
+      o.textContent = a.chemin + " (" + a.resultats.length + " résultats)";
+      $("choixArbre").appendChild(o);
+    });
+    $("choixArbre").onchange = function () { choisirArbre(D.arbres[+this.value]); };
+  }
+
+  // ---------------------------------------------------------------- filtre (mêmes règles que l'arbre filtrable)
+  function lireFiltre() {
+    var f = { motif: $("motif").value, regex: $("regex").checked, casse: $("casse").checked,
+              exclure: $("exclure").checked, transactions: $("transactions").checked, re: null, erreur: null };
+    if (f.regex && f.motif) {
+      try { f.re = new RegExp(f.motif, f.casse ? "" : "i"); } catch (e) { f.erreur = e.message; }
+    }
+    f.actif = f.motif.length > 0 && !f.erreur;
+    return f;
+  }
+  function nomCorrespond(f, nom) {
+    if (!f.actif) { return true; }
+    if (nom == null) { return false; }
+    if (f.re) { return f.re.test(nom); }
+    return f.casse ? nom.indexOf(f.motif) >= 0 : nom.toLowerCase().indexOf(f.motif.toLowerCase()) >= 0;
+  }
+  function eligible(f, r) { return !f.transactions || !!r.tx; }
+  function brancheCorrespond(f, r) {
+    if (!r.a && eligible(f, r) && nomCorrespond(f, r.l)) { return true; }
+    return (r.enf || []).some(function (s) { return !s.a && brancheCorrespond(f, s); });
+  }
+  function garder(f, r) {
+    if (!f.actif) { return true; }
+    if (f.exclure) { return !(eligible(f, r) && nomCorrespond(f, r.l)); }
+    return brancheCorrespond(f, r);
+  }
+
+  // ---------------------------------------------------------------- arbre
+  function creerNoeud(r) {
+    var li = document.createElement("li");
+    li.className = (r.ok ? "ok" : "ko") + (r.tx ? " tx" : "") + " ferme";
+    var ligne = document.createElement("div");
+    ligne.className = "noeud";
+    var enfants = r.enf || [];
+    var b = document.createElement("span");
+    b.className = "bascule";
+    b.textContent = enfants.length ? "▶" : "";
+    var ic = document.createElement("span");
+    ic.className = "icone";
+    ic.textContent = r.ok ? "✔" : "✖";
+    var nom = document.createElement("span");
+    nom.className = "nom";
+    nom.textContent = r.l;
+    ligne.appendChild(b); ligne.appendChild(ic); ligne.appendChild(nom);
+    if (!r.a) { ligne.title = r.l + " — " + r.t + " ms" + (r.code ? " — " + r.code : ""); }
+    li.appendChild(ligne);
+    li._r = r;
+    li._rempli = false;
+    b.onclick = function (e) { e.stopPropagation(); basculer(li); };
+    ligne.onclick = function () { selectionner(li); };
+    ligne.ondblclick = function () { basculer(li); };
+    return li;
+  }
+  function remplir(li) {
+    if (li._rempli) { return; }
+    li._rempli = true;
+    var enfants = li._r.enf || [];
+    if (!enfants.length) { return; }
+    var ul = document.createElement("ul");
+    enfants.forEach(function (s) { ul.appendChild(creerNoeud(s)); });
+    li.appendChild(ul);
+  }
+  function ouvrir(li, ouvert) {
+    if (!(li._r.enf || []).length) { return; }
+    if (ouvert) { remplir(li); }
+    li.classList.toggle("ferme", !ouvert);
+    li.firstChild.firstChild.textContent = ouvert ? "▼" : "▶";
+  }
+  function basculer(li) { ouvrir(li, li.classList.contains("ferme")); }
+
+  function construireArbre() {
+    var f = lireFiltre();
+    var a = arbreCourant, ul = document.createElement("ul"), n = 0;
+    a.resultats.forEach(function (r) {
+      if (garder(f, r)) { ul.appendChild(creerNoeud(r)); n++; }
+    });
+    $("arbre").innerHTML = "";
+    $("arbre").appendChild(ul);
+    var etat = $("etatFiltre");
+    etat.className = f.erreur ? "erreur" : "";
+    if (f.erreur) {
+      etat.textContent = "Expression invalide : " + f.erreur + " — tout est affiché.";
+    } else if (f.actif) {
+      etat.textContent = n + " affiché(s) sur " + a.resultats.length;
+    } else {
+      etat.textContent = a.resultats.length + " résultat(s)";
+    }
+    if (a.filtrable && a.filtre && a.filtre.motif) {
+      etat.textContent += " — filtre au moment de la sauvegarde : « " + a.filtre.motif + " »";
+    }
+    if (!n) {
+      $("arbre").innerHTML = '<div class="vide">' + (a.resultats.length ? "Aucun résultat ne correspond au filtre." : "Arbre vide.") + "</div>";
+    }
+    noeudSel = null;
+    afficher(null);
+  }
+
+  function choisirArbre(a) {
+    arbreCourant = a;
+    var f = a.filtre || {};
+    $("motif").value = f.motif || "";
+    $("regex").checked = !!f.regex;
+    $("casse").checked = !!f.casse;
+    $("exclure").checked = !!f.exclure;
+    $("transactions").checked = !!f.transactions;
+    construireArbre();
+  }
+
+  var minuterie = null;
+  $("motif").oninput = function () { clearTimeout(minuterie); minuterie = setTimeout(construireArbre, 200); };
+  ["regex", "casse", "exclure", "transactions"].forEach(function (id) { $(id).onchange = construireArbre; });
+  $("effacer").onclick = function () { $("motif").value = ""; construireArbre(); };
+  $("developper").onclick = function () {
+    // Développe ce qui est affiché, niveau par niveau.
+    var pile = Array.prototype.slice.call($("arbre").querySelectorAll(":scope > ul > li"));
+    while (pile.length) {
+      var li = pile.shift();
+      ouvrir(li, true);
+      var ul = li.querySelector(":scope > ul");
+      if (ul) { pile = pile.concat(Array.prototype.slice.call(ul.children)); }
+    }
+  };
+  $("reduire").onclick = function () {
+    Array.prototype.forEach.call($("arbre").querySelectorAll("li"), function (li) { ouvrir(li, false); });
+  };
+
+  // ---------------------------------------------------------------- sélection et clavier
+  function selectionner(li) {
+    if (noeudSel) { noeudSel.firstChild.classList.remove("sel"); }
+    noeudSel = li;
+    li.firstChild.classList.add("sel");
+    li.firstChild.scrollIntoView({ block: "nearest" });
+    afficher(li._r);
+  }
+  function visibles() {
+    return Array.prototype.filter.call($("arbre").querySelectorAll("li"), function (li) {
+      return li.offsetParent !== null;
+    });
+  }
+  document.addEventListener("keydown", function (e) {
+    if (!noeudSel || e.target.tagName === "INPUT" || e.target.tagName === "SELECT") { return; }
+    var v = visibles(), i = v.indexOf(noeudSel);
+    if (e.key === "ArrowDown" && i < v.length - 1) { selectionner(v[i + 1]); e.preventDefault(); }
+    else if (e.key === "ArrowUp" && i > 0) { selectionner(v[i - 1]); e.preventDefault(); }
+    else if (e.key === "ArrowRight") { ouvrir(noeudSel, true); e.preventDefault(); }
+    else if (e.key === "ArrowLeft") {
+      if (!noeudSel.classList.contains("ferme") && (noeudSel._r.enf || []).length) { ouvrir(noeudSel, false); }
+      else if (noeudSel.parentNode.parentNode.tagName === "LI") { selectionner(noeudSel.parentNode.parentNode); }
+      e.preventDefault();
+    }
+  });
+
+  // ---------------------------------------------------------------- panneau de droite
+  function pre(texte, classe) {
+    var p = document.createElement("pre");
+    p.textContent = texte == null ? "" : texte;
+    if (classe) { p.className = classe; }
+    return p;
+  }
+  function note(texte) {
+    var d = document.createElement("div");
+    d.className = "note";
+    d.textContent = texte;
+    return d;
+  }
+  function boutons(conteneur, titres, actif, choix) {
+    conteneur.innerHTML = "";
+    titres.forEach(function (t, i) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.textContent = t;
+      if (i === actif) { b.className = "actif"; }
+      b.onclick = function () { choix(i); };
+      conteneur.appendChild(b);
+    });
+  }
+  function statistiques(r) {
+    // Le code de réponse prend la couleur de JMeter : 3xx vert, 4xx bleu, 5xx rouge.
+    var div = document.createElement("div");
+    var lignes = (r.stats || "").split("\n");
+    var niveau = /^\d{3}$/.test(r.code || "") ? r.code.charAt(0) : "";
+    lignes.forEach(function (l, i) {
+      var classe = (niveau >= "3" && niveau <= "5" && i === 12) ? "c" + niveau : "";
+      div.appendChild(pre(l + (i < lignes.length - 1 ? "\n" : ""), classe));
+    });
+    return div;
+  }
+
+  function afficher(r) {
+    var on = $("onglets"), so = $("sousonglets"), c = $("contenu");
+    so.innerHTML = "";
+    so.style.display = "none";
+    if (!r) {
+      on.innerHTML = "";
+      c.innerHTML = '<div class="vide">Sélectionner un résultat dans l\'arbre.</div>';
+      return;
+    }
+    if (r.a) {
+      boutons(on, [L.view_results_tab_assertion], 0, function () {});
+      c.innerHTML = "";
+      c.appendChild(pre(r.stats));
+      return;
+    }
+    var titres = [L.view_results_tab_sampler, L.view_results_tab_request, L.view_results_tab_response];
+    boutons(on, titres, ongletSel, function (i) { ongletSel = i; afficher(r); });
+    c.innerHTML = "";
+    if (ongletSel === 0) {
+      c.appendChild(statistiques(r));
+    } else if (ongletSel === 1) {
+      sousOnglets(so, "req", [L.view_results_request_body, L.view_results_request_headers], r, function (i) {
+        c.appendChild(pre(i === 0 ? r.req : r.reqh));
+      });
+    } else {
+      sousOnglets(so, "rep", [L.view_results_response_body, L.view_results_response_headers], r, function (i) {
+        if (i === 1) { c.appendChild(pre(r.resh)); return; }
+        if (r.note) { c.appendChild(note(r.note)); }
+        if (r.img) {
+          var img = document.createElement("img");
+          img.className = "reponse";
+          img.alt = r.l;
+          img.src = "data:" + r.mime + ";base64," + r.img;
+          c.appendChild(img);
+        } else {
+          c.appendChild(pre(r.corps));
+        }
+      });
+    }
+  }
+  function sousOnglets(so, cle, titres, r, rendu) {
+    var actif = sousOngletSel[cle] || 0;
+    so.style.display = "block";
+    var barre = document.createElement("div");
+    barre.className = "onglets";
+    so.appendChild(barre);
+    boutons(barre, titres, actif, function (i) { sousOngletSel[cle] = i; afficher(r); });
+    rendu(actif);
+  }
+
+  if (D.arbres.length) {
+    choisirArbre(D.arbres[0]);
+  } else {
+    $("arbre").innerHTML = '<div class="vide">Aucun arbre de résultats dans le plan.</div>';
+  }
+})();
+</script>
+</body>
+</html>
