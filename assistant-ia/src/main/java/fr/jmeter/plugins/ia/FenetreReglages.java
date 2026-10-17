@@ -38,10 +38,10 @@ final class FenetreReglages extends JDialog {
 
     private final ConfigAssistant config;
     private final DefaultListModel<Profil> modeleProfils = new DefaultListModel<>();
-    private final JList<Profil> liste = new JList<>(modeleProfils);
+    private final JList<Profil> liste = SansHtml.liste(new JList<>(modeleProfils));
     private final JTextField nom = new JTextField(30);
     private final JTextField url = new JTextField(30);
-    private final JComboBox<String> modele = new JComboBox<>();
+    private final JComboBox<String> modele = SansHtml.combo(new JComboBox<String>());
     private final JTextField cle = new JTextField(30);
     private final JTextArea entetes = new JTextArea(3, 30);
     private final JTextArea parametres = new JTextArea(4, 30);

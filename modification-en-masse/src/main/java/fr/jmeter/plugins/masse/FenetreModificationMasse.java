@@ -71,7 +71,7 @@ public class FenetreModificationMasse extends JDialog {
     private final JRadioButton radioEntete = new JRadioButton(Cible.ENTETE.getLibelle(), true);
     private final JRadioButton radioParametre = new JRadioButton(Cible.PARAMETRE.getLibelle());
     private final ModeleEntetes modeleEntetes = new ModeleEntetes();
-    private final JTable tableEntetes = new JTable(modeleEntetes);
+    private final JTable tableEntetes = SansHtml.table(new JTable(modeleEntetes));
     private final JLabel lblNom = new JLabel();
     private final JTextField champNomEntete = new JTextField(20);
     private final JTextField champValeurEntete = new JTextField(30);
@@ -147,7 +147,7 @@ public class FenetreModificationMasse extends JDialog {
         onglets.addTab("Rechercher / remplacer", ongletRemplacer());
         onglets.addTab("Renommer", ongletRenommer());
 
-        JTable tableApercu = new JTable(modeleApercu);
+        JTable tableApercu = SansHtml.table(new JTable(modeleApercu));
         tableApercu.getColumnModel().getColumn(0).setMaxWidth(30);
         tableApercu.getColumnModel().getColumn(1).setPreferredWidth(320);
         tableApercu.getColumnModel().getColumn(2).setPreferredWidth(150);
@@ -292,6 +292,7 @@ public class FenetreModificationMasse extends JDialog {
                 return super.getListCellRendererComponent(l, MoteurModification.chemin((JMeterTreeNode) v), i, sel, f);
             }
         });
+        SansHtml.liste(listeTrouvees);
         JButton chercher = new JButton("Chercher");
         chercher.addActionListener(e -> chercherTransactions());
         champChercherTx.addActionListener(e -> chercherTransactions());

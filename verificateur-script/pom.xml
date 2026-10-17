@@ -11,7 +11,7 @@
   </parent>
 
   <artifactId>verificateur-script</artifactId>
-  <version>0.1.0</version>
+  <version>0.1.1</version>
   <name>Vérificateur de script</name>
   <description>Signale les défauts courants d'un plan de test JMeter avant de le livrer ou de le lancer.</description>
 

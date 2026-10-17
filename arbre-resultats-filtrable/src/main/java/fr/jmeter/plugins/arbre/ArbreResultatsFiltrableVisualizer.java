@@ -200,7 +200,7 @@ public class ArbreResultatsFiltrableVisualizer extends ViewResultsFullVisualizer
     // ------------------------------------------------------------------
 
     private void installerBarreFiltre() {
-        champFiltre = new JComboBox<>(modeleNoms);
+        champFiltre = SansHtml.combo(new JComboBox<>(modeleNoms));
         champFiltre.setEditable(true);
         champFiltre.setPrototypeDisplayValue("Nom de transaction assez long");
         champFiltre.setMaximumRowCount(20);
@@ -548,7 +548,7 @@ public class ArbreResultatsFiltrableVisualizer extends ViewResultsFullVisualizer
         JCheckBox transactions = new JCheckBox("Transactions seules", caseTransactions.isSelected());
         JTextField recherche = new JTextField();
         DefaultListModel<String> modele = new DefaultListModel<>();
-        JList<String> liste = new JList<>(modele);
+        JList<String> liste = SansHtml.liste(new JList<>(modele));
         JLabel compte = new JLabel(" ");
 
         Runnable remplir = () -> {

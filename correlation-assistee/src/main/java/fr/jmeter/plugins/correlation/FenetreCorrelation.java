@@ -46,7 +46,7 @@ public class FenetreCorrelation extends JDialog {
     private final JLabel lblB = new JLabel(" ");
     private final JTextField champJtl = new JTextField(45);
     private final Modele modele = new Modele();
-    private final JTable table = new JTable(modele);
+    private final JTable table = SansHtml.table(new JTable(modele));
     private final JTextArea detail = new JTextArea(4, 80);
     private final JLabel bilan = new JLabel(" ");
     private final JButton boutonAppliquer = new JButton("Appliquer les lignes cochées");

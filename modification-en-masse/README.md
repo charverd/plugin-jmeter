@@ -18,7 +18,7 @@ Depuis la 0.2.0, le premier onglet choisit sa cible, **en-tête HTTP** ou
 Compatible JMeter 5.4.3 et plus récent, Java 11 (bytecode Java 8).
 
 1. Fermer JMeter, **retirer l'ancienne version** (`modification-en-masse-0.x.x.jar`)
-   de `lib\ext` si elle y est, et copier `modification-en-masse-0.3.0.jar`
+   de `lib\ext` si elle y est, et copier `modification-en-masse-0.3.1.jar`
    à la place (par exemple `C:\apache-jmeter-5.4.3\lib\ext\`).
 2. Relancer JMeter.
 

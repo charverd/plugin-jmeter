@@ -20,6 +20,10 @@ import com.fasterxml.jackson.databind.JsonNode;
 
 class AssistantTest {
 
+    static {
+        EnvironnementJMeter.preparer();
+    }
+
     /** Écouteur qui note tout. */
     static final class Note implements ClientOpenAI.Ecouteur {
         final StringBuilder texte = new StringBuilder();

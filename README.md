@@ -13,6 +13,12 @@ Plugins maison pour Apache JMeter, un module Maven par plugin.
 | [`sauvegarde-arbre-html`](sauvegarde-arbre-html/) | Bouton « Sauvegarder en HTML puis nettoyer » à côté de « Nettoyer » : page HTML autonome qui reproduit l'arbre de résultats (compatible avec l'arbre filtrable) |
 | [`assistant-ia`](assistant-ia/) | Assistant IA dans JMeter : n'importe quel modèle à l'API OpenAI, prompt adapté à JMeter, modifications du plan proposées avec aperçu et annulation |
 
+## Sécurité
+
+[`SECURITE.md`](SECURITE.md) : audit du 2026-10-17. Aucune connexion sortante,
+sauf l'assistant IA vers l'API du modèle choisi. Le document détaille les
+constats, les correctifs et les risques résiduels.
+
 ## Construire
 
 Java 11 (ou 8+), Maven 3.9.

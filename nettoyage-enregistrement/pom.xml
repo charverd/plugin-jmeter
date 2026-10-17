@@ -11,7 +11,7 @@
   </parent>
 
   <artifactId>nettoyage-enregistrement</artifactId>
-  <version>0.1.0</version>
+  <version>0.1.1</version>
   <name>Nettoyage d'enregistrement</name>
   <description>Après un enregistrement : retirer ressources statiques et domaines tiers, regrouper les requêtes en transactions par page.</description>
 

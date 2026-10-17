@@ -204,5 +204,9 @@ class ExportHtmlTest {
         String h = new String(Files.readAllBytes(f.toPath()), StandardCharsets.UTF_8);
         assertEquals("éàü €", donnees(h).path("arbres").path(0).path("resultats").path(0).path("corps").asText());
         assertEquals(1, dossier.toPath().resolve("sous/dossier").toFile().list().length, "pas de fichier temporaire restant");
+        if (java.nio.file.FileSystems.getDefault().supportedFileAttributeViews().contains("posix")) {
+            assertEquals("rw-------", java.nio.file.attribute.PosixFilePermissions.toString(
+                    Files.getPosixFilePermissions(f.toPath())), "page lisible par son seul propriétaire");
+        }
     }
 }

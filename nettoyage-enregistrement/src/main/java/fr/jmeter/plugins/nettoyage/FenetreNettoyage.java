@@ -101,7 +101,7 @@ public class FenetreNettoyage extends JDialog {
         g.gridy++;
         reglages.add(new JLabel("Domaines trouvés (cocher ceux à supprimer ; les tiers connus sont précochés) :"), g);
         g.gridy++;
-        JTable tableDomaines = new JTable(modeleDomaines);
+        JTable tableDomaines = SansHtml.table(new JTable(modeleDomaines));
         tableDomaines.getColumnModel().getColumn(0).setMaxWidth(70);
         tableDomaines.getColumnModel().getColumn(2).setMaxWidth(90);
         tableDomaines.getColumnModel().getColumn(3).setMaxWidth(90);

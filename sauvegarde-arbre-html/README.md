@@ -17,12 +17,12 @@ et elle s'ouvre avec ce même filtre.
 Compatible JMeter 5.4.3 et plus récent, Java 11 (bytecode Java 8). Aucune
 dépendance à ajouter.
 
-1. Fermer JMeter et copier `sauvegarde-arbre-html-0.1.0.jar` dans `lib\ext`.
+1. Fermer JMeter et copier `sauvegarde-arbre-html-0.1.1.jar` dans `lib\ext`.
 2. Relancer JMeter.
 
 Le plugin n'ajoute rien au plan de test : les plans tournent partout sans lui.
 L'arbre de résultats filtrable n'est pas nécessaire. S'il est installé, il est
-pris en charge en version 0.2.0 (et 0.1.1).
+pris en charge des versions 0.1.1 à 0.2.1.
 
 ## Utilisation
 

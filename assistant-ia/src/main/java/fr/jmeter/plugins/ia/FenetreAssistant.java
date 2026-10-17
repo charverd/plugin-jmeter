@@ -59,10 +59,10 @@ public class FenetreAssistant extends JDialog {
     private static FenetreAssistant instance;
 
     private ConfigAssistant config;
-    private final JComboBox<Profil> profils = new JComboBox<>();
+    private final JComboBox<Profil> profils = SansHtml.combo(new JComboBox<Profil>());
     private final JTextPane conversation = new JTextPane();
     private final JTextArea saisie = new JTextArea(4, 60);
-    private final JComboBox<String> commandes = new JComboBox<>();
+    private final JComboBox<String> commandes = SansHtml.combo(new JComboBox<String>());
     private final JCheckBox caseArbre = new JCheckBox("Arborescence du plan", true);
     private final JCheckBox caseSelection = new JCheckBox("Éléments sélectionnés (XML)", true);
     private final JCheckBox caseVerif = new JCheckBox("Rapport du vérificateur", false);
@@ -70,7 +70,7 @@ public class FenetreAssistant extends JDialog {
     private final JButton arreter = new JButton("Arrêter");
     private final JLabel etat = new JLabel("Prêt");
     private final ModeleActions modeleActions = new ModeleActions();
-    private final JTable tableActions = new JTable(modeleActions);
+    private final JTable tableActions = SansHtml.table(new JTable(modeleActions));
     private final JTextArea detailAction = new JTextArea(4, 60);
     private final JButton appliquer = new JButton("Appliquer les actions cochées");
     private final JButton defaire = new JButton("Annuler la dernière application");
@@ -455,7 +455,14 @@ public class FenetreAssistant extends JDialog {
         }
         try {
             if (a.type == ActionIA.Type.AJOUTER || a.type == ActionIA.Type.REMPLACER) {
-                List<String> av = ValidationJmx.avertissements(ApplicationActions.charger(a.xml));
+                List<String> av = new java.util.ArrayList<>(
+                        ValidationJmx.avertissements(ApplicationActions.charger(a.xml)));
+                List<String> code = ApplicationActions.codeExecutable(a.xml);
+                if (!code.isEmpty()) {
+                    av.add(0, "exécutera du code pendant le tir : " + String.join(", ", code)
+                            + " — décoché, à relire avant de cocher");
+                    a.cochee = false;
+                }
                 if (!av.isEmpty()) {
                     a.avertissement = String.join(" ; ", av);
                 }
@@ -465,10 +472,21 @@ public class FenetreAssistant extends JDialog {
                 if (!inc.isEmpty()) {
                     a.avertissement = "propriété(s) inconnue(s) de JMeter : " + String.join(", ", inc);
                 }
+                for (Object v : a.proprietes.values()) {
+                    String f = ControleXml.fonctionScript(String.valueOf(v));
+                    if (f != null) {
+                        a.avertissement = (a.avertissement == null ? "" : a.avertissement + " ; ")
+                                + "fonction " + f + " : évaluera un script pendant le tir — décoché, à relire";
+                        a.cochee = false;
+                        break;
+                    }
+                }
             }
         } catch (Exception e) {
             String m = e.getMessage() == null ? e.toString() : e.getMessage();
-            a.erreur = "XML refusé par JMeter : " + m.split("\n")[0];
+            a.erreur = (e instanceof ControleXml.Refus ? "XML refusé (sécurité) : " : "XML refusé par JMeter : ")
+                    + m.split("\n")[0];
+            a.cochee = false;
         }
     }
 

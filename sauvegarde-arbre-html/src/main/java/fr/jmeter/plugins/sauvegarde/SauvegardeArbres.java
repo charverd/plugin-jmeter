@@ -146,7 +146,10 @@ final class SauvegardeArbres {
         if (dossier != null && !dossier.isDirectory() && !dossier.mkdirs()) {
             throw new IOException("dossier impossible à créer : " + dossier);
         }
-        File temp = File.createTempFile(".sauvegarde-", ".tmp", dossier);
+        // Files.createTempFile : lisible par le seul propriétaire (600) sous Linux et macOS ; la page
+        // garde ces droits après renommage, car elle contient les en-têtes (cookies, jetons).
+        File temp = (dossier == null ? Files.createTempFile(".sauvegarde-", ".tmp")
+                : Files.createTempFile(dossier.toPath(), ".sauvegarde-", ".tmp")).toFile();
         boolean ok = false;
         try {
             try (Writer w = new BufferedWriter(new OutputStreamWriter(Files.newOutputStream(temp.toPath()),

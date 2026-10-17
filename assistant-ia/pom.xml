@@ -11,7 +11,7 @@
   </parent>
 
   <artifactId>assistant-ia</artifactId>
-  <version>0.1.0</version>
+  <version>0.2.0</version>
   <name>Assistant IA</name>
   <description>Assistant IA dans JMeter : n'importe quel modèle à l'API OpenAI, prompt adapté à JMeter, modifications du plan avec aperçu.</description>
 

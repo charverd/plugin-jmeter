@@ -11,7 +11,7 @@
   </parent>
 
   <artifactId>correlation-assistee</artifactId>
-  <version>0.1.0</version>
+  <version>0.1.1</version>
   <name>Corrélation assistée</name>
   <description>Repère les valeurs dynamiques en comparant deux enregistrements, crée les extracteurs et remplace les valeurs par des variables.</description>
 

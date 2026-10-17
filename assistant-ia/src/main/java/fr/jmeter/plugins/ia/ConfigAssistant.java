@@ -70,13 +70,14 @@ public class ConfigAssistant {
         }
     }
 
+    /**
+     * Configuration du premier lancement : profils locaux seulement (localhost). Aucun service en
+     * ligne n'est proposé d'office : un serveur distant (API d'entreprise…) s'ajoute dans les réglages.
+     */
     public static ConfigAssistant exemple() {
         ConfigAssistant c = new ConfigAssistant();
         c.profils.add(new Profil("Ollama (local)", "http://localhost:11434/v1", "llama3.1", ""));
         c.profils.add(new Profil("LM Studio (local)", "http://localhost:1234/v1", "", ""));
-        c.profils.add(new Profil("OpenAI", "https://api.openai.com/v1", "", "${env:OPENAI_API_KEY}"));
-        c.profils.add(new Profil("Mistral", "https://api.mistral.ai/v1", "", "${env:MISTRAL_API_KEY}"));
-        c.profils.add(new Profil("OpenRouter", "https://openrouter.ai/api/v1", "", "${env:OPENROUTER_API_KEY}"));
         c.profilActif = c.profils.get(0).nom;
         return c;
     }

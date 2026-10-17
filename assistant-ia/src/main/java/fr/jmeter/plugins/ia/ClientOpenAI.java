@@ -77,7 +77,15 @@ public class ClientOpenAI {
     }
 
     private HttpURLConnection ouvrir(String chemin, String methode) throws IOException {
-        HttpURLConnection cx = (HttpURLConnection) new URL(profil.point(chemin)).openConnection();
+        URL url = new URL(profil.point(chemin));
+        if (!"http".equalsIgnoreCase(url.getProtocol()) && !"https".equalsIgnoreCase(url.getProtocol())) {
+            throw new IOException("URL refusée (http ou https seulement) : " + url.getProtocol());
+        }
+        HttpURLConnection cx = (HttpURLConnection) url.openConnection();
+        // Seul le serveur du profil est contacté : une redirection (vers un autre hôte, avec la clé
+        // d'API dans les en-têtes) n'est pas suivie et remonte comme une erreur HTTP 3xx.
+        cx.setInstanceFollowRedirects(false);
+        cx.setUseCaches(false);
         cx.setRequestMethod(methode);
         cx.setConnectTimeout(CONNEXION_MS);
         cx.setReadTimeout(LECTURE_MS);
@@ -110,6 +118,16 @@ public class ClientOpenAI {
     }
 
     /** Message d'erreur lisible à partir d'une réponse d'erreur OpenAI ({"error":{"message":…}}) ou brute. */
+    /** Message d'une réponse en erreur ; une redirection n'est pas suivie et l'indique. */
+    private static String erreurHttp(HttpURLConnection cx, int code) throws IOException {
+        if (code < 400) {
+            String vers = cx.getHeaderField("Location");
+            return "HTTP " + code + " : redirection" + (vers == null ? "" : " vers " + vers)
+                    + " non suivie — corriger l'URL du profil";
+        }
+        return messageErreur(code, lireTout(cx.getErrorStream()));
+    }
+
     static String messageErreur(int code, String corps) {
         String detail = corps == null ? "" : corps.trim();
         try {
@@ -146,8 +164,8 @@ public class ClientOpenAI {
                 o.write(corps(messages, true).getBytes(StandardCharsets.UTF_8));
             }
             int code = cx.getResponseCode();
-            if (code >= 400) {
-                e.erreur(messageErreur(code, lireTout(cx.getErrorStream())));
+            if (code >= 300) {
+                e.erreur(erreurHttp(cx, code));
                 return;
             }
             String type = cx.getContentType() == null ? "" : cx.getContentType();
@@ -243,8 +261,8 @@ public class ClientOpenAI {
         HttpURLConnection cx = ouvrir("/models", "GET");
         cx.setReadTimeout(CONNEXION_MS);
         int code = cx.getResponseCode();
-        if (code >= 400) {
-            throw new IOException(messageErreur(code, lireTout(cx.getErrorStream())));
+        if (code >= 300) {
+            throw new IOException(erreurHttp(cx, code));
         }
         List<String> l = new ArrayList<>();
         for (JsonNode m : ConfigAssistant.JSON.readTree(lireTout(cx.getInputStream())).path("data")) {
@@ -265,8 +283,8 @@ public class ClientOpenAI {
             o.write(corps(m, false).getBytes(StandardCharsets.UTF_8));
         }
         int code = cx.getResponseCode();
-        if (code >= 400) {
-            throw new IOException(messageErreur(code, lireTout(cx.getErrorStream())));
+        if (code >= 300) {
+            throw new IOException(erreurHttp(cx, code));
         }
         final StringBuilder sb = new StringBuilder();
         lireReponseComplete(lireTout(cx.getInputStream()), new Ecouteur() {

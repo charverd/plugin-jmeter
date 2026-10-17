@@ -15,7 +15,7 @@ ligne, sans règles à écrire à l'avance.
 
 Compatible JMeter 5.4.3 et plus récent, Java 11 (bytecode Java 8).
 
-1. Fermer JMeter et copier `correlation-assistee-0.1.0.jar` dans `lib\ext`.
+1. Fermer JMeter et copier `correlation-assistee-0.1.1.jar` dans `lib\ext`.
 2. Relancer JMeter.
 
 Les extracteurs créés sont des Boundary Extractor standards : le plan tourne

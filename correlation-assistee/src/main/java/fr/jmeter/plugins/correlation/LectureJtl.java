@@ -67,8 +67,14 @@ public final class LectureJtl {
 
     public static List<Reponse> lire(File fichier) throws Exception {
         SAXParserFactory f = SAXParserFactory.newInstance();
+        // Un JTL de JMeter n'a pas de DOCTYPE : on les refuse, avec toute entité ou DTD externe
+        // (aucun accès réseau ni fichier depuis le contenu lu).
+        f.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
         f.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false);
         f.setFeature("http://xml.org/sax/features/external-general-entities", false);
+        f.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
+        f.setFeature(javax.xml.XMLConstants.FEATURE_SECURE_PROCESSING, true);
+        f.setXIncludeAware(false);
         SAXParser p = f.newSAXParser();
         List<Reponse> l = new ArrayList<>();
         p.parse(fichier, new DefaultHandler() {

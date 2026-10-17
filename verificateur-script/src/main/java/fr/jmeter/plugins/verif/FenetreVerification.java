@@ -45,7 +45,7 @@ public class FenetreVerification extends JDialog {
     private static FenetreVerification instance;
 
     private final ModeleConstats modele = new ModeleConstats();
-    private final JTable table = new JTable(modele);
+    private final JTable table = SansHtml.table(new JTable(modele));
     private final JLabel resume = new JLabel(" ");
     private final JTextArea detail = new JTextArea(3, 60);
     private final Map<Gravite, JCheckBox> filtres = new EnumMap<>(Gravite.class);
@@ -83,7 +83,7 @@ public class FenetreVerification extends JDialog {
         table.getColumnModel().getColumn(1).setMaxWidth(130);
         table.getColumnModel().getColumn(2).setPreferredWidth(330);
         table.getColumnModel().getColumn(3).setPreferredWidth(450);
-        table.getColumnModel().getColumn(1).setCellRenderer(new RenduGravite());
+        table.getColumnModel().getColumn(1).setCellRenderer(SansHtml.neutraliser(new RenduGravite()));
         table.getSelectionModel().addListSelectionListener(e -> {
             int i = table.getSelectedRow();
             Constat c = i < 0 ? null : modele.lignes.get(table.convertRowIndexToModel(i));

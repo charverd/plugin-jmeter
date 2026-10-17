@@ -223,7 +223,7 @@ final class ApplicationActions {
 
     /** Fragment JMX → arbre d'éléments, en ajoutant les <hashTree/> oubliés après chaque élément de premier niveau. */
     static HashTree charger(String fragment) throws Exception {
-        File f = File.createTempFile("assistant-ia", ".jmx");
+        File f = Files.createTempFile("assistant-ia", ".jmx").toFile(); // 600 sous Linux et macOS
         try {
             Files.write(f.toPath(), envelopper(fragment).getBytes(StandardCharsets.UTF_8));
             return SaveService.loadTree(f);
@@ -232,12 +232,31 @@ final class ApplicationActions {
         }
     }
 
-    static String envelopper(String fragment) throws Exception {
+    /** Fragment lu dans une enveloppe {@code <hashTree>}, sans DTD ni entité externe. */
+    static Element analyser(String fragment) throws Exception {
         DocumentBuilderFactory fab = DocumentBuilderFactory.newInstance();
         fab.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
+        fab.setFeature(javax.xml.XMLConstants.FEATURE_SECURE_PROCESSING, true);
+        fab.setExpandEntityReferences(false);
+        fab.setXIncludeAware(false);
         Document d = fab.newDocumentBuilder()
                 .parse(new InputSource(new StringReader("<hashTree>" + fragment.trim() + "</hashTree>")));
-        Element racine = d.getDocumentElement();
+        return d.getDocumentElement();
+    }
+
+    /** Ce qui, dans le fragment, exécutera du code pendant un tir (voir {@link ControleXml#codeExecutable}). */
+    static List<String> codeExecutable(String fragment) throws Exception {
+        return ControleXml.codeExecutable(analyser(fragment));
+    }
+
+    /**
+     * Contrôle le fragment par liste blanche ({@link ControleXml}), puis l'enveloppe en plan complet
+     * en ajoutant les {@code <hashTree/>} manquants. Rien n'est passé à JMeter sans ce contrôle.
+     */
+    static String envelopper(String fragment) throws Exception {
+        Element racine = analyser(fragment);
+        ControleXml.verifier(racine);
+        Document d = racine.getOwnerDocument();
         List<Node> enfants = new ArrayList<>();
         for (Node c = racine.getFirstChild(); c != null; c = c.getNextSibling()) {
             if (c.getNodeType() == Node.ELEMENT_NODE) {

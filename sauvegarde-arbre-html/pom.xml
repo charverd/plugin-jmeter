@@ -11,7 +11,7 @@
   </parent>
 
   <artifactId>sauvegarde-arbre-html</artifactId>
-  <version>0.1.0</version>
+  <version>0.1.1</version>
   <name>Sauvegarde HTML de l'arbre de résultats</name>
   <description>Bouton de la barre d'outils : sauvegarde les arbres de résultats dans une page HTML autonome, puis les nettoie.</description>
 

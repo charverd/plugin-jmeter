@@ -19,7 +19,7 @@ Compatible JMeter 5.4.3 et plus récent, Java 11 (bytecode Java 8). Aucune
 dépendance à ajouter : le JSON passe par la bibliothèque Jackson livrée avec
 JMeter.
 
-1. Fermer JMeter et copier `assistant-ia-0.1.0.jar` dans `lib\ext`.
+1. Fermer JMeter et copier `assistant-ia-0.2.0.jar` dans `lib\ext`.
 2. Relancer JMeter : **Outils > Assistant IA…**, ou clic droit dans l'arbre
    > **Assistant IA…**.
 
@@ -27,7 +27,9 @@ Le plugin n'ajoute rien au plan : un plan modifié avec lui tourne partout.
 
 ## Brancher un modèle
 
-**Réglages…** dans la fenêtre :
+Au premier lancement, la configuration ne contient que des **profils locaux**
+(`localhost` : Ollama, LM Studio). Aucun service en ligne n'est proposé
+d'office. Pour l'API de votre modèle, ajoutez un profil dans **Réglages…** :
 
 ![Réglages](docs/reglages.png)
 
@@ -138,6 +140,33 @@ partent vers le serveur du profil choisi : URL, noms de requêtes, valeurs
 saisies dans le plan. Avec un service en ligne, ne pas joindre de plan
 contenant des secrets, ou utiliser un modèle local. Décocher **Joindre**
 pour ne rien envoyer d'autre que la question.
+
+## Sécurité
+
+- **Connexions sortantes** : la seule est la requête vers l'URL du profil choisi.
+  Elle part quand on clique sur *Envoyer*, *Lister les modèles* ou *Tester*,
+  jamais à l'ouverture de la fenêtre. Seuls `http` et `https` sont acceptés.
+  Une **redirection n'est pas suivie** : elle aurait pu envoyer la clé d'API à
+  un autre hôte. Elle apparaît comme une erreur.
+- **XML proposé par le modèle** : JMeter 5.4.3 lit les plans en acceptant
+  n'importe quelle classe Java. Le XML du modèle passe donc d'abord par une
+  **liste blanche**, avant tout traitement par JMeter :
+  - les balises d'éléments doivent désigner des éléments de test ;
+  - `guiclass` doit désigner un écran JMeter ;
+  - seules les propriétés `stringProp`, `boolProp`, `intProp`, `longProp`,
+    `floatProp`, `doubleProp`, `elementProp` et `collectionProp` sont admises ;
+  - ni DOCTYPE, ni `objProp`, ni attribut `class`.
+
+  Les classes sont vérifiées **sans être initialisées**.
+- **Code exécuté pendant un tir** : une action est signalée et **décochée** si
+  elle ajoute un élément JSR223, BeanShell ou OS Process, ou une fonction
+  `__groovy`, `__javaScript`, `__BeanShell` ou `__jexl`. Il faut la relire avant
+  de la cocher.
+- **Affichage** : les textes du modèle ne sont jamais interprétés comme du HTML
+  par Swing. Une image distante ne peut donc pas être chargée à l'affichage.
+- **Fichiers** : la configuration (`~/.jmeter-assistant-ia.json`) est lisible
+  par son seul propriétaire sous Linux et macOS. La clé peut rester dans une
+  variable d'environnement (`${env:…}`).
 
 ## Limites
 

@@ -11,7 +11,7 @@
   </parent>
 
   <artifactId>arbre-resultats-filtrable</artifactId>
-  <version>0.2.0</version>
+  <version>0.2.1</version>
   <name>Arbre de résultats filtrable</name>
   <description>Arbre de résultats JMeter avec copie des noms et filtre sur les noms.</description>
 
