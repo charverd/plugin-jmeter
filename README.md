@@ -10,6 +10,7 @@ Plugins maison pour Apache JMeter, un module Maven par plugin.
 | [`verificateur-script`](verificateur-script/) | Signale les défauts courants d'un plan avant de le livrer ou de le lancer (14 règles) |
 | [`nettoyage-enregistrement`](nettoyage-enregistrement/) | Après un enregistrement : retirer ressources statiques et domaines tiers, regrouper en transactions par page |
 | [`correlation-assistee`](correlation-assistee/) | Compare deux enregistrements du même parcours, crée les extracteurs et remplace les valeurs dynamiques par des variables |
+| [`assistant-ia`](assistant-ia/) | Assistant IA dans JMeter : n'importe quel modèle à l'API OpenAI, prompt adapté à JMeter, modifications du plan proposées avec aperçu et annulation |
 
 ## Construire
 

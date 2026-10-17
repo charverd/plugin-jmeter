@@ -17,6 +17,7 @@
     <module>verificateur-script</module>
     <module>nettoyage-enregistrement</module>
     <module>correlation-assistee</module>
+    <module>assistant-ia</module>
   </modules>
 
   <properties>
