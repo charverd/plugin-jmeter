@@ -12,6 +12,7 @@ Plugins maison pour Apache JMeter, un module Maven par plugin.
 | [`correlation-assistee`](correlation-assistee/) | Compare deux enregistrements du même parcours, crée les extracteurs et remplace les valeurs dynamiques par des variables |
 | [`sauvegarde-arbre-html`](sauvegarde-arbre-html/) | Bouton « Sauvegarder en HTML puis nettoyer » à côté de « Nettoyer » : page HTML autonome qui reproduit l'arbre de résultats (compatible avec l'arbre filtrable) |
 | [`assistant-ia`](assistant-ia/) | Assistant IA dans JMeter : n'importe quel modèle à l'API OpenAI, prompt adapté à JMeter, modifications du plan proposées avec aperçu et annulation |
+| [`transaction-si`](transaction-si/) | Contrôleur de transaction qui ne s'exécute que si une condition est vraie (Si + Transaction en un seul élément) ; en cas d'échec, sa ligne de résultat donne le code et le message de la requête fautive |
 
 ## Sécurité
 

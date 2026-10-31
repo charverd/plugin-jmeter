@@ -27,6 +27,7 @@
     <module>correlation-assistee</module>
     <module>assistant-ia</module>
     <module>sauvegarde-arbre-html</module>
+    <module>transaction-si</module>
   </modules>
 
   <properties>

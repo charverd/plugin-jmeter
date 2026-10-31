@@ -1,7 +1,7 @@
 # SPEC — Contrôleur de transaction Si
 
 Version de référence : **Apache JMeter 5.4.3, Java 11 (bytecode Java 8)**, comme les autres
-plugins du dépôt. Statut : **validé le 2026-10-31**, sauf la question 5 (§8). Rédigé le 2026-10-31.
+plugins du dépôt. Statut : **validé le 2026-10-31**, sauf la question 5 (§8). **v0.1.0 construite et essayée le 2026-10-31.** Rédigé le 2026-10-31.
 
 ## 1. Le besoin
 
@@ -61,8 +61,10 @@ Lu dans `org.apache.jmeter.control.IfController` et `TransactionController` (tag
   `Number of samples in transaction : N, number of failing samples : M`. Le CSV contient donc
   **les lignes des requêtes et une ligne de transaction**.
 - **Mode « Generate parent sample »** (`parent=true`) : les requêtes deviennent des
-  sous-résultats de la transaction. Dans un CSV, qui ne garde pas les sous-résultats, **seule
-  la ligne de transaction reste**.
+  sous-résultats de la transaction. Le CSV les écrit quand même en lignes séparées, après la
+  ligne de transaction, tant que `jmeter.save.saveservice.subresults=true` (valeur par
+  défaut) ; pour n'avoir que la ligne de transaction, il faut mettre cette propriété à
+  `false` (vérifié en 5.4.3 le 2026-10-31).
 - `includeTimers` (vrai par défaut) : si l'option est décochée, le temps des minuteries et des
   pré/post-processeurs est soustrait de la durée (il passe dans `idle_time`).
 - `triggerEndOfLoop` (par exemple « Start next thread loop » sur erreur) : la transaction en
@@ -120,8 +122,7 @@ Ce que fait le standard en 5.4.3 quand un enfant échoue :
   (il n'est renseigné, à `200`, que si tout a réussi) et le message `Number of samples in
   transaction : 3, number of failing samples : 1`. On sait que la transaction a échoué, pas
   pourquoi ; il faut retrouver la requête fautive parmi les autres lignes du CSV ;
-- **mode parent** : `responseCode` = code du premier enfant en échec, même message ; les
-  requêtes, sous-résultats, ne sont pas dans le CSV.
+- **mode parent** : `responseCode` = code du premier enfant en échec, même message.
 
 Avec *Détailler l'échec dans le résultat* (cochée par défaut), la ligne de transaction en
 échec porte en plus, **dans les deux modes** :
@@ -258,6 +259,7 @@ pour le Transaction Controller standard (exemple : `T03_Panier_${profil}`).
 3. **Condition vide** = vraie. ✔
 4. **Nom** : « Contrôleur de transaction Si », module `transaction-si`. ✔
 5. **Encore ouverte : mode par défaut.** Faut-il cocher *Générer un échantillon parent* par
-   défaut, pour n'avoir dans le CSV que la ligne de transaction sans les requêtes ? Le
-   standard ne le coche pas. En attendant la réponse, la spec garde le comportement du
-   standard (décoché).
+   défaut ? Le standard ne le coche pas, et la v0.1.0 non plus. À savoir pour trancher : même
+   cochée, les requêtes restent écrites dans le CSV tant que
+   `jmeter.save.saveservice.subresults=true` (défaut) ; l'option change surtout l'arbre de
+   résultats et le rapport HTML.
