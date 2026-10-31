@@ -1,10 +1,13 @@
 # SPEC — Contrôleur de transaction Si
 
 Version de référence : **Apache JMeter 5.4.3, Java 11 (bytecode Java 8)**, comme les autres
-plugins du dépôt. Statut : **brouillon à valider** (questions ouvertes en §8). Rédigé le
-2026-10-31.
+plugins du dépôt. Statut : **validé le 2026-10-31**, sauf la question 5 (§8). Rédigé le 2026-10-31.
 
 ## 1. Le besoin
+
+But principal : **simplifier la lecture du plan dans JMeter**. Une transaction conditionnelle
+tient en un seul élément au lieu de deux. Exigence associée : **quand la transaction
+échoue, le fichier de résultats doit le montrer clairement** (§4.2 bis).
 
 Aujourd'hui, pour qu'une transaction ne s'exécute que sous condition et apparaisse quand même
 dans le fichier de résultats CSV, il faut imbriquer deux éléments :
@@ -71,6 +74,7 @@ Lu dans `org.apache.jmeter.control.IfController` et `TransactionController` (tag
 - Un nouveau contrôleur logique « Contrôleur de transaction Si », avec ces options :
   - les deux du Transaction Controller : *Générer un échantillon parent*, *Inclure la durée
     des minuteries et pré/post-processeurs* ;
+  - *Détailler l'échec dans le résultat* (cochée par défaut, §4.2 bis) ;
   - celles du If Controller : *Condition*, *Interpréter comme une expression de variable*
     (cochée par défaut, contrairement au Si standard, parce que c'est la pratique
     recommandée et que c'est bien plus rapide que JavaScript).
@@ -108,6 +112,36 @@ Critère d'acceptation : pour un même plan joué avec la même graine, la ligne
 produite par « Transaction Si » et celle produite par Si > Transaction ont les mêmes colonnes
 `label`, `responseCode`, `responseMessage`, `success`, `bytes`, `sentBytes`, `grpThreads`,
 `allThreads`, et des valeurs cohérentes pour `elapsed`, `Latency`, `Connect`, `IdleTime`.
+
+### 4.2 bis Transaction en échec : ce que montre le CSV
+
+Ce que fait le standard en 5.4.3 quand un enfant échoue :
+- **mode par défaut** : la ligne de transaction a `success=false`, un `responseCode` **vide**
+  (il n'est renseigné, à `200`, que si tout a réussi) et le message `Number of samples in
+  transaction : 3, number of failing samples : 1`. On sait que la transaction a échoué, pas
+  pourquoi ; il faut retrouver la requête fautive parmi les autres lignes du CSV ;
+- **mode parent** : `responseCode` = code du premier enfant en échec, même message ; les
+  requêtes, sous-résultats, ne sont pas dans le CSV.
+
+Avec *Détailler l'échec dans le résultat* (cochée par défaut), la ligne de transaction en
+échec porte en plus, **dans les deux modes** :
+- `responseCode` = code du **premier enfant en échec** (par exemple `500`, ou `200` si c'est
+  une assertion qui a échoué) ;
+- `failureMessage` (colonne du CSV) = `Premier échec : <libellé> (<code> <message>) ;
+  <message de la première assertion en échec, s'il y en a une>`, tronqué à 500 caractères. Le
+  contenu passe par un `AssertionResult` en échec ajouté à la ligne de transaction, ce qui
+  est le chemin normal vers cette colonne.
+
+`responseMessage` n'est **pas modifié** : il doit commencer par `Number of samples in
+transaction : `, et c'est à ce préfixe que JMeter et le rapport HTML reconnaissent une
+transaction (`TransactionController.isFromTransactionController`).
+
+Une transaction réussie reste identique au standard (§4.2). Le critère d'acceptation de §4.2
+s'applique donc aux transactions réussies, et aux transactions en échec quand l'option est
+décochée.
+
+À vérifier par essai : le classement de ces échecs dans le tableau « Errors » et
+« Top 5 errors » du rapport HTML (code + message, ou message d'assertion).
 
 ### 4.3 Condition fausse
 Proposition par défaut, identique à l'imbrication Si > Transaction : **aucun enfant
@@ -152,13 +186,20 @@ pour le Transaction Controller standard (exemple : `T03_Panier_${profil}`).
   La condition est évaluée **avant** `super.next()`. Le `SampleResult` ou le
   `TransactionSampler` n'est donc jamais créé quand la condition est fausse, et aucune ligne
   vide n'est émise.
+- **Détail de l'échec** : on redéfinit `sampleOccurred` (appel à `super`, puis on mémorise le
+  premier `SampleResult` en échec) et `notifyListeners()`, juste avant l'émission, pour
+  compléter le résultat en cours. En mode parent, on complète le résultat du
+  `TransactionSampler` au moment où il devient `isTransactionDone()`. Le champ `res` du
+  parent est privé : il faut passer par la réflexion, ou recopier la petite partie
+  non parent de `TransactionController`. On choisit à l'implémentation, après essai.
 - **Évaluation** : on ne peut pas appeler les méthodes privées de `IfController`. On reprend
   sa logique dans une petite classe `Condition` : expression de variable, et JavaScript par
   `javax.script` avec Nashorn ou Rhino selon `javascript.use_rhino`, un moteur par thread
   (`ThreadLocal`), libéré dans `threadFinished()`. Les mêmes messages d'erreur sont produits.
 - **Propriétés enregistrées dans le .jmx** : celles du Transaction Controller
   (`TransactionController.parent`, `TransactionController.includeTimers`), plus
-  `TransactionSi.condition`, `TransactionSi.useExpression` et `TransactionSi.traceIgnored`.
+  `TransactionSi.condition`, `TransactionSi.useExpression`, `TransactionSi.traceIgnored` et
+  `TransactionSi.detailFailure`.
   Ce sont des clés propres au plugin : un plan qui l'utilise n'est de toute façon pas lisible
   sans le plugin (§6).
 - **GUI** : `TransactionSiGui extends AbstractControllerGui`, rangée dans *Ajouter >
@@ -192,6 +233,8 @@ pour le Transaction Controller standard (exemple : `T03_Panier_${profil}`).
   `TransactionController` témoin ;
 - transaction Si imbriquée dans une transaction standard, et l'inverse ;
 - `triggerEndOfLoop` au milieu de la transaction ;
+- enfant en échec (code 500, puis assertion en échec sur un 200), dans les deux modes :
+  `responseCode` et `failureMessage` attendus ; option décochée : ligne identique au standard ;
 - sauvegarde puis rechargement du .jmx avec toutes les propriétés.
 
 **De bout en bout (JMeter 5.4.3 réel, non-GUI)**, sur le modèle de `essais-scripting/` :
@@ -200,19 +243,21 @@ pour le Transaction Controller standard (exemple : `T03_Panier_${profil}`).
 - `jmeter -n -t plan.jmx -l resultats.csv`, puis comparaison des lignes : mêmes libellés,
   mêmes nombres de lignes, mêmes colonnes ; avec l'option de traçage, présence des lignes
   `(ignorée)` ;
+- une requête volontairement en échec (500) : la ligne de transaction du CSV montre `false`,
+  `500` et `Premier échec : …` ;
 - génération du rapport HTML (`-e -o`) sans erreur ;
 - essai GUI avec capture d'écran pour le README (`docs/`), comme les autres plugins.
 
-## 8. Questions ouvertes
+## 8. Décisions (2026-10-31) et question restante
 
-1. **« Si »** : la spec suppose que le « contrôleur de transaction SI » est le *Contrôleur Si*
-   de JMeter (If Controller). Si c'était autre chose, la spec est à revoir.
-2. **Condition fausse** : faut-il seulement sauter la transaction (comme aujourd'hui), ou
-   voir quelque chose dans le CSV ? Si oui, l'option « Tracer les passages ignorés » de §4.3
-   convient-elle (libellé `<nom> (ignorée)`, durée 0) ?
-3. **Condition vide** : vraie (proposé) ou fausse (comme le Si standard) ?
-4. **Nom** : « Contrôleur de transaction Si » dans le menu, module `transaction-si`. Un autre
-   nom ?
-5. **Mode par défaut** : faut-il cocher *Générer un échantillon parent* par défaut, pour
-   n'avoir dans le CSV que la ligne de transaction sans les requêtes ? (Le standard ne le
-   coche pas.)
+1. **« Si »** = le *Contrôleur Si* de JMeter (If Controller). ✔
+2. **Condition fausse** : on saute la transaction, sans ligne dans le CSV par défaut ;
+   l'option « Tracer les passages ignorés » reste disponible, décochée. ✔ Exigence ajoutée par
+   l'utilisateur : **une transaction en échec doit se voir dans le fichier de résultats** →
+   §4.2 bis.
+3. **Condition vide** = vraie. ✔
+4. **Nom** : « Contrôleur de transaction Si », module `transaction-si`. ✔
+5. **Encore ouverte : mode par défaut.** Faut-il cocher *Générer un échantillon parent* par
+   défaut, pour n'avoir dans le CSV que la ligne de transaction sans les requêtes ? Le
+   standard ne le coche pas. En attendant la réponse, la spec garde le comportement du
+   standard (décoché).
