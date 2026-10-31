@@ -54,3 +54,7 @@ corrélation, vérification, puis rejeu du plan corrigé).
 `outils/bonsai/` : délégation de tâches de code au modèle local Bonsai
 (voir son README pour le bilan de l'essai).
 
+
+## Licence
+
+[Apache License 2.0](LICENSE), comme JMeter.
